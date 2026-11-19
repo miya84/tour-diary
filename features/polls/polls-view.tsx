@@ -37,7 +37,7 @@ export function PollsView({ tripId, days, polls }: { tripId: string; days: strin
           ))}
         </ul>
       ) : (
-        <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
+        <div className="flex flex-col items-center gap-2 rounded-2xl bg-muted/70 px-4 py-8 text-center text-sm text-muted-foreground">
           <b className="text-[15px] font-semibold text-foreground">아직 투표가 없습니다</b>
           <span>후보지가 갈리면 투표로 정하세요. 마감하면 일정에 들어갑니다.</span>
           <Button size="sm" onClick={() => setCreating(true)}>
@@ -149,7 +149,7 @@ function PollCard({ tripId, poll }: { tripId: string; poll: Poll }) {
   };
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl bg-card p-3 ring-1 ring-foreground/10">
+    <div className="flex flex-col gap-3 rounded-2xl bg-card p-3 shadow-soft ring-1 ring-foreground/5">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="break-words text-sm font-semibold">{poll.question}</div>

@@ -83,7 +83,7 @@ export function TripView({ tripId, days, items, readOnly = false }: { tripId: st
 
   return (
     <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? ""} language="ko">
-      <div role="tablist" className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5">
+      <div role="tablist" className="flex gap-1 overflow-x-auto rounded-2xl bg-muted p-1">
         {days.map((d, i) => {
           const l = dayLabel(d);
           const selected = d === activeDay;
@@ -95,13 +95,15 @@ export function TripView({ tripId, days, items, readOnly = false }: { tripId: st
               data-day-tab={d}
               onClick={() => selectDay(d)}
               className={
-                "flex min-w-16 flex-none flex-col items-center rounded-2xl border px-2.5 py-1.5 text-xs leading-snug " +
-                (dropDay === d ? "border-primary bg-primary/15 ring-2 ring-primary " : "") +
-                (selected ? "border-primary bg-primary text-primary-foreground" : "border-border")
+                "flex min-w-16 flex-1 flex-col items-center rounded-xl px-2 py-1.5 text-[11px] leading-tight " +
+                (dropDay === d ? "bg-primary/15 ring-2 ring-primary " : "") +
+                (selected ? "bg-background text-primary shadow-soft" : "text-muted-foreground")
               }
             >
-              <b className={"text-[11px] font-semibold " + (selected ? "text-primary-foreground/75" : "text-muted-foreground")}>DAY {i + 1}</b>
-              {l.short} {l.weekday}
+              <b className={"text-sm font-bold " + (selected ? "text-primary" : "text-foreground")}>
+                {l.short} <span className="text-xs font-medium">{l.weekday}</span>
+              </b>
+              DAY {i + 1}
             </button>
           );
         })}
@@ -109,9 +111,9 @@ export function TripView({ tripId, days, items, readOnly = false }: { tripId: st
 
       <DayRouteMap points={points} />
 
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-base font-semibold">{dayLabel(activeDay).full}</h2>
-        <div className="flex gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="whitespace-nowrap text-base font-bold">{dayLabel(activeDay).full}</h2>
+        <div className="ml-auto flex gap-1.5">
           {!readOnly && (dayItems.length > 1 || reordering) && (
             <Button size="sm" variant={reordering ? "default" : "outline"} disabled={!!orderHolder && !reordering} onClick={() => setReordering((r) => !r)}>
               {reordering ? "완료" : "순서 변경"}
@@ -150,7 +152,7 @@ export function TripView({ tripId, days, items, readOnly = false }: { tripId: st
           onMoveToDay={moveItem}
         />
       ) : (
-        <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed px-4 py-7 text-center text-sm text-muted-foreground">
+        <div className="flex flex-col items-center gap-2 rounded-2xl bg-muted/70 px-4 py-7 text-center text-sm text-muted-foreground">
           <b className="text-[15px] font-semibold text-foreground">이 날은 아직 일정이 없습니다</b>
           {!readOnly && <span>일정을 추가하면 장소가 있는 항목이 지도에 나타납니다.</span>}
         </div>
@@ -262,46 +264,57 @@ function ItemList({
   };
 
   return (
-    <ul ref={listRef} className={"flex flex-col gap-2 " + (reordering ? "select-none" : "")}>
-      {shown.map((item) => {
+    // 타임라인: 왼쪽 시간, 세로선 위의 지도 번호(장소 없는 항목은 빈 점), 오른쪽 내용.
+    <ul ref={listRef} className={"flex flex-col " + (reordering ? "select-none" : "")}>
+      {shown.map((item, index) => {
         const n = liveNumbers.get(item.id);
-        const sub = [item.startTime, item.note].filter(Boolean).join(" · ");
         const editor = holder(itemLock(item.id));
         return (
           <li
             key={item.id}
             data-item-id={item.id}
             className={
-              "grid grid-cols-[28px_1fr_auto] items-start gap-2.5 rounded-2xl bg-card p-3 ring-1 " +
-              (draggingId === item.id ? "relative z-10 bg-accent shadow-lg ring-2 ring-primary" : reordering ? "ring-primary/35" : "ring-foreground/10")
+              "relative grid grid-cols-[2.75rem_1.375rem_1fr_auto] items-start gap-x-2 rounded-xl py-2 " +
+              (draggingId === item.id ? "z-10 bg-accent shadow-lg ring-2 ring-primary" : "")
             }
           >
+            <span
+              aria-hidden
+              className={
+                "absolute left-[3.875rem] w-0.5 bg-border " +
+                (index === 0 ? "top-4 " : "top-0 ") +
+                (index === shown.length - 1 ? "h-4" : "bottom-0")
+              }
+            />
+            <span className={"pt-0.5 text-right text-[13px] tabular-nums " + (item.startTime ? "font-bold" : "text-muted-foreground")}>
+              {item.startTime || "—"}
+            </span>
             {n ? (
-              <span className="grid size-6.5 place-items-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">{n}</span>
-            ) : (
-              <span className="grid size-6.5 place-items-center rounded-full bg-muted text-xs text-muted-foreground" title="장소 없음">
-                –
+              <span className="relative grid size-5.5 place-items-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground ring-4 ring-background">
+                {n}
               </span>
+            ) : (
+              <span className="relative mt-1.5 size-3 justify-self-center rounded-full border-2 border-muted-foreground/40 bg-background" title="장소 없음" />
             )}
             <div className="min-w-0">
-              <div className="text-sm font-semibold leading-snug">{item.title}</div>
-              {item.place ? (
-                <div className="mt-0.5 text-xs text-muted-foreground">📍 {item.place.name}</div>
-              ) : (
-                <span className="mt-1.5 inline-block rounded-full bg-muted px-2 py-px text-[11px] text-muted-foreground">장소 없음 · 지도에 안 나옴</span>
+              <div className="text-[15px] font-medium leading-snug">{item.title}</div>
+              {item.place && (
+                <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-muted-foreground">📍 {item.place.name}</span>
+                  {!reordering && (
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.place.name)}&query_place_id=${encodeURIComponent(item.place.placeId)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium text-primary"
+                    >
+                      지도 열기 ↗
+                    </a>
+                  )}
+                </div>
               )}
-              {sub && <div className="mt-0.5 text-xs text-muted-foreground">{sub}</div>}
+              {item.note && <div className="mt-0.5 text-xs text-muted-foreground">{item.note}</div>}
               {editor && <div className="mt-0.5 text-xs font-medium text-primary">{editor}님이 수정 중</div>}
-              {item.place && !reordering && (
-                <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.place.name)}&query_place_id=${encodeURIComponent(item.place.placeId)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-1.5 inline-block text-xs font-medium text-primary"
-                >
-                  지도 열기 ↗
-                </a>
-              )}
             </div>
             {reordering ? (
               <span

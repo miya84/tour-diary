@@ -29,7 +29,7 @@ export function PasswordResetForm() {
   };
 
   return (
-    <form onSubmit={submit} noValidate className="grid gap-2 rounded-2xl bg-card p-4 ring-1 ring-foreground/10">
+    <form onSubmit={submit} noValidate className="grid gap-2 rounded-2xl bg-card p-4 shadow-soft ring-1 ring-foreground/5">
       <Label htmlFor="reset-email">비밀번호 초기화</Label>
       <div className="flex gap-2">
         <Input

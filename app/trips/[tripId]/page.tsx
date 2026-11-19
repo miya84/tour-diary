@@ -1,4 +1,6 @@
 import Link from "@/components/app-link";
+import { CalendarDaysIcon, TicketIcon, VoteIcon, WalletIcon } from "lucide-react";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { BookingsView } from "@/features/bookings/bookings-view";
@@ -39,9 +41,9 @@ export default async function TripPage({ params }: PageProps<"/trips/[tripId]">)
           <Link href="/" className="text-sm text-muted-foreground">
             ← 내 여행
           </Link>
-          <h1 className="mt-0.5 text-2xl font-semibold tracking-tight">{trip.title}</h1>
-          <div className="mt-0.5 flex items-center justify-between gap-2">
-            <p className="text-sm text-muted-foreground">{tripPeriodLabel(trip.startDate, trip.endDate)}</p>
+          <h1 className="mt-0.5 text-[22px] font-bold leading-tight tracking-tight">{trip.title}</h1>
+          <div className="mt-1 flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
+            <p className="whitespace-nowrap text-sm text-muted-foreground">{tripPeriodLabel(trip.startDate, trip.endDate)}</p>
             <CopyTripSheet trip={{ id: trip.id, title: trip.title, startDate: trip.startDate, endDate: trip.endDate }} />
           </div>
           <p className="mt-1 text-sm text-muted-foreground">{nicknames[trip.ownerId] ?? "멤버"}님이 만든 여행 · 읽기 전용</p>
@@ -72,9 +74,9 @@ export default async function TripPage({ params }: PageProps<"/trips/[tripId]">)
         <Link href="/" className="text-sm text-muted-foreground">
           ← 내 여행
         </Link>
-        <h1 className="mt-0.5 text-2xl font-semibold tracking-tight">{trip.title}</h1>
-        <div className="mt-0.5 flex items-center justify-between gap-2">
-          <p className="text-sm text-muted-foreground">{tripPeriodLabel(trip.startDate, trip.endDate)}</p>
+        <h1 className="mt-0.5 text-[22px] font-bold leading-tight tracking-tight">{trip.title}</h1>
+        <div className="mt-1 flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
+          <p className="whitespace-nowrap text-sm text-muted-foreground">{tripPeriodLabel(trip.startDate, trip.endDate)}</p>
           <div className="flex items-center gap-2">
             <CopyTripSheet trip={{ id: trip.id, title: trip.title, startDate: trip.startDate, endDate: trip.endDate }} />
             {trip.ownerId === user.id && <EditTripSheet tripId={tripId} trip={{ title: trip.title, startDate: trip.startDate, endDate: trip.endDate }} />}
@@ -84,11 +86,12 @@ export default async function TripPage({ params }: PageProps<"/trips/[tripId]">)
       </div>
       <TripTabs
         tabs={[
-          { id: "itinerary", label: "일정", content: <TripView tripId={tripId} days={days} items={items} /> },
-          { id: "bookings", label: "예약함", content: <BookingsView tripId={tripId} bookings={bookings} /> },
+          { id: "itinerary", label: "일정", icon: <CalendarDaysIcon />, content: <TripView tripId={tripId} days={days} items={items} /> },
+          { id: "bookings", label: "예약함", icon: <TicketIcon />, content: <BookingsView tripId={tripId} bookings={bookings} /> },
           {
             id: "expenses",
             label: "경비",
+            icon: <WalletIcon />,
             content: (
               <ExpensesView tripId={tripId} days={days} people={people} currentUserId={user.id} expenses={expenses}
                 krwPer100Jpy={rate}
@@ -96,7 +99,7 @@ export default async function TripPage({ params }: PageProps<"/trips/[tripId]">)
               />
             ),
           },
-          { id: "polls", label: "투표", content: <PollsView tripId={tripId} days={days} polls={polls} /> },
+          { id: "polls", label: "투표", icon: <VoteIcon />, content: <PollsView tripId={tripId} days={days} polls={polls} /> },
         ]}
       />
     </TripRealtime>

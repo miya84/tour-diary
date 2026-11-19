@@ -51,9 +51,9 @@ export function ExpensesView({
         </Button>
       </div>
 
-      <section className="flex flex-col gap-2 rounded-2xl bg-card p-4 ring-1 ring-foreground/10">
+      <section className="flex flex-col gap-2 rounded-2xl bg-card p-4 shadow-soft ring-1 ring-foreground/5">
         <div className="text-xs text-muted-foreground">전체 합계</div>
-        <TotalsLine totals={total} className="text-lg font-semibold" />
+        <TotalsLine totals={total} className="text-2xl font-bold text-primary" />
         {totalInKrw !== null && <div className="text-sm">원으로 합치면 약 {formatMoney(totalInKrw, "KRW")}</div>}
         <RateEditor tripId={tripId} rate={krwPer100Jpy} />
         <div className="flex justify-end border-t pt-2">
@@ -68,7 +68,7 @@ export function ExpensesView({
               <h3 className="text-sm font-semibold">{dayLabel(g.day).full}</h3>
               <TotalsLine totals={g.totals} className="text-sm text-muted-foreground" />
             </div>
-            <ul className="flex flex-col gap-2">
+            <ul className="divide-y overflow-hidden rounded-2xl bg-card shadow-soft ring-1 ring-foreground/5">
               {expenses
                 .filter((e) => e.spentOn === g.day)
                 .map((e) => {
@@ -79,7 +79,7 @@ export function ExpensesView({
                       type="button"
                       disabled={!!editor}
                       onClick={() => setForm({ open: true, expense: e, day: e.spentOn })}
-                      className="grid w-full grid-cols-[1fr_auto] items-center gap-3 rounded-2xl bg-card p-3 text-left ring-1 ring-foreground/10"
+                      className="grid w-full grid-cols-[1fr_auto] items-center gap-3 px-4 py-3 text-left hover:bg-muted/50 disabled:opacity-60"
                     >
                       <span className="min-w-0">
                         <span className="block truncate text-sm font-semibold">{e.title}</span>
@@ -96,7 +96,7 @@ export function ExpensesView({
           </section>
         ))
       ) : (
-        <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
+        <div className="flex flex-col items-center gap-2 rounded-2xl bg-muted/70 px-4 py-8 text-center text-sm text-muted-foreground">
           <b className="text-[15px] font-semibold text-foreground">아직 경비가 없습니다</b>
           <span>쓴 돈을 바로 적어 두면 나중에 정산할 때 씁니다.</span>
           <Button size="sm" onClick={openNew}>
