@@ -38,26 +38,26 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", inter.variable)}
     >
       <body className="min-h-full flex flex-col">
-        <div className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-5 px-4 py-4">
+        <div className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-4 px-4 py-3">
           <header className="flex items-center justify-between gap-2">
-            <Link href="/" className="text-[15px] font-semibold tracking-tight">
-              J의 여행수첩
+            <Link href="/" className="shrink-0 text-xl font-bold tracking-tight">
+              <span className="text-primary">J</span>의 여행수첩
             </Link>
-            <nav className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
+            <nav className="flex min-w-0 items-center gap-0.5 text-sm text-muted-foreground">
               {user ? (
                 <>
                   {admin && (
-                    <Link href="/admin" className="shrink-0 rounded-full px-3 py-1 text-foreground hover:bg-muted">
+                    <Link href="/admin" className="shrink-0 rounded-full px-2 py-1 text-foreground hover:bg-muted">
                       어드민
                     </Link>
                   )}
-                  <Link href="/profile" className="max-w-40 truncate rounded-full px-3 py-1 text-foreground hover:bg-muted">
+                  <Link href="/profile" className="max-w-40 truncate rounded-full px-2 py-1 text-foreground hover:bg-muted">
                     {profile?.nickname ?? user.email}
                   </Link>
                   <LogoutButton />
                 </>
               ) : (
-                <Link href="/auth/login" className="rounded-full px-3 py-1 text-foreground hover:bg-muted">
+                <Link href="/auth/login" className="rounded-full px-2 py-1 text-foreground hover:bg-muted">
                   로그인
                 </Link>
               )}

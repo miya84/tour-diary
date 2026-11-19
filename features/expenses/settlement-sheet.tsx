@@ -53,7 +53,7 @@ export function SettlementSheet({
                   <h3 className="font-semibold">사람별</h3>
                   <span className="text-muted-foreground tabular-nums">총 {formatMoney(settlement.total, "KRW")}</span>
                 </div>
-                <ul className="flex flex-col divide-y rounded-2xl bg-card text-sm ring-1 ring-foreground/10">
+                <ul className="flex flex-col divide-y rounded-2xl bg-card text-sm shadow-soft ring-1 ring-foreground/5">
                   {settlement.people.map((p) => (
                     <li key={p.userId} className="grid grid-cols-[1fr_auto] items-center gap-3 px-3 py-2.5">
                       <span className="min-w-0">
@@ -81,7 +81,7 @@ export function SettlementSheet({
                       return (
                         <li
                           key={transferKey(t)}
-                          className={"grid grid-cols-[1fr_auto] items-center gap-3 rounded-2xl p-3 ring-1 ring-foreground/10 " + (done ? "bg-muted" : "bg-card")}
+                          className={"grid grid-cols-[1fr_auto] items-center gap-3 rounded-2xl p-3 shadow-soft ring-1 ring-foreground/5 " + (done ? "bg-muted" : "bg-card")}
                         >
                           <span className="min-w-0 text-sm">
                             <span className={"block truncate " + (done ? "text-muted-foreground line-through" : "")}>
@@ -113,5 +113,5 @@ export function SettlementSheet({
 }
 
 function Notice({ children }: { children: React.ReactNode }) {
-  return <p className="rounded-2xl border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">{children}</p>;
+  return <p className="rounded-2xl bg-muted/70 px-4 py-6 text-center text-sm text-muted-foreground">{children}</p>;
 }
