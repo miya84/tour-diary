@@ -248,6 +248,19 @@
   .items.reordering .item { box-shadow: 0 0 0 1px color-mix(in oklch, var(--primary) 35%, transparent) }
   .item.dragging { background: var(--accent); box-shadow: 0 0 0 2px var(--primary), 0 8px 20px rgb(0 0 0 / 14%); position: relative; z-index: 2 }
   .item.dragging .handle { cursor: grabbing }
+
+  .members { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px }
+  .member { display: grid; grid-template-columns: 32px 1fr auto; gap: 10px; align-items: center; padding: 8px 4px }
+  .avatar { width: 32px; height: 32px; border-radius: 999px; display: grid; place-items: center; background: var(--secondary); color: var(--secondary-foreground); font-size: 13px; font-weight: 600 }
+  .member .who { font-size: 14px; font-weight: 500; line-height: 1.3 }
+  .member .who small { display: block; color: var(--muted-foreground); font-size: 12px; font-weight: 400 }
+  .pill { display: inline-block; font-size: 11px; padding: 1px 8px; border-radius: 999px; background: var(--muted); color: var(--muted-foreground); margin-left: 4px; vertical-align: 1px }
+  .pill.wait { background: color-mix(in oklch, var(--primary) 12%, transparent); color: var(--primary) }
+  .invite-card { display: flex; flex-direction: column; gap: 10px; border-radius: 18px; padding: 14px 16px;
+    background: color-mix(in srgb, var(--primary) 6%, var(--card)); box-shadow: 0 0 0 1px color-mix(in oklch, var(--primary) 30%, transparent) }
+  .invite-card .t { font-size: 14px; line-height: 1.45 }
+  .invite-card .t b { font-weight: 600 }
+  .section-label { font-size: 13px; font-weight: 600; color: var(--muted-foreground); margin: 0 }
 </style>
 
 <header class="sh-bar">
@@ -310,7 +323,7 @@
   </section>
 
   <!-- 3. 내 여행 목록 -->
-  <section data-screen="trips" data-title="내 여행" data-states="여행 없음">
+  <section data-screen="trips" data-title="내 여행" data-states="받은 초대 없음,여행 없음">
     <div class="app">
       <header class="app-header">
         <a class="app-title" href="#trips">여행 수첩</a>
@@ -321,6 +334,7 @@
         <h1 class="page-title">내 여행</h1>
         <button class="btn sm" id="open-new-trip" data-component="Button">새 여행</button>
       </div>
+      <div class="stack" id="invites" data-when="Default"></div>
       <div class="stack" id="trip-list" data-when="Default"></div>
       <div class="empty" data-when="여행 없음" hidden data-component="Empty">
         <b>아직 만든 여행이 없습니다</b>
@@ -350,7 +364,7 @@
   </section>
 
   <!-- 4. 여행 화면 -->
-  <section data-screen="trip" data-title="여행: 하루 동선" data-states="핀 1개,핀 없음">
+  <section data-screen="trip" data-title="여행: 하루 동선" data-states="핀 1개,핀 없음,멤버로 볼 때">
     <div class="app">
       <header class="app-header">
         <a class="app-title" href="#trips">여행 수첩</a>
@@ -360,7 +374,10 @@
       <div>
         <a class="muted" href="#trips" style="text-decoration:none">← 내 여행</a>
         <h1 class="page-title" style="margin-top:2px">후쿠오카 12월</h1>
-        <div class="muted">2026. 12. 12 – 12. 15 · 3박 4일</div>
+        <div class="row" style="justify-content:space-between;margin-top:2px">
+          <div class="muted">2026. 12. 12 – 12. 15 · 3박 4일</div>
+          <button class="btn outline sm" id="open-members" data-component="Button">멤버 <span id="member-count">2</span></button>
+        </div>
       </div>
       <div class="tabs" id="day-tabs" role="tablist" data-component="Tabs"></div>
 
@@ -408,6 +425,21 @@
             <button class="btn" type="submit" data-component="Button">저장</button>
           </div>
         </form>
+      </div>
+      <div class="scrim" id="members-dialog" hidden>
+        <div class="sheet" data-component="Dialog">
+          <div class="row" style="justify-content:space-between"><h3>멤버</h3>
+            <button class="btn ghost sm" type="button" id="members-close" data-component="Button">닫기</button></div>
+          <ul class="members" id="member-list"></ul>
+          <form class="stack" id="invite-form" novalidate>
+            <div class="field"><label class="label" for="inv-email">이메일로 초대</label>
+              <div class="row"><input class="input grow" id="inv-email" type="email" placeholder="가입한 친구의 이메일" data-component="Input">
+                <button class="btn" type="submit" data-component="Button">초대</button></div>
+              <p class="error" id="inv-error" hidden></p>
+              <p class="muted" style="margin:0">가입된 회원만 초대할 수 있습니다. 상대가 수락하면 함께 편집할 수 있어요.</p></div>
+          </form>
+          <p class="muted" id="member-note" hidden style="margin:0">초대와 내보내기는 여행을 만든 사람만 할 수 있습니다.</p>
+        </div>
       </div>
       <div class="toast" id="toast" hidden></div>
     </div>
@@ -710,13 +742,13 @@
 
     /* ── 여행 목록 ── */
     const trips = [
-      { title: '후쿠오카 12월', start: '2026. 12. 12', end: '12. 15', days: 4, count: () => items.length },
+      { title: '후쿠오카 12월', start: '2026. 12. 12', end: '12. 15', days: 4, count: () => items.length, people: '석 · 썬' },
       { title: '오사카 벚꽃 여행', start: '2026. 3. 28', end: '4. 1', days: 5, count: () => 0 },
     ];
     function renderTrips() {
       $('#trip-list').innerHTML = trips.map(t => `<a class="card trip-link" href="#trip" data-component="Card">
         <h3>${esc(t.title)}</h3>
-        <div class="meta"><span>${t.start} – ${t.end}</span><span>·</span><span>${t.days}일</span><span>·</span><span>일정 ${t.count()}개</span></div></a>`).join('');
+        <div class="meta"><span>${t.start} – ${t.end}</span><span>·</span><span>${t.days}일</span><span>·</span><span>일정 ${t.count()}개</span></div>${t.shared ? `<div class="meta"><span>${esc(t.shared)}님이 만든 여행 · 함께 편집</span></div>` : ''}</a>`).join('');
     }
     const openNew = () => { $('#nt-error').hidden = true; $('#nt-title').value = ''; showScrim($('#new-trip-dialog')); $('#nt-title').focus(); };
     document.addEventListener('click', e => { if (e.target.id === 'open-new-trip' || e.target.hasAttribute('data-open-new-trip')) openNew(); });
@@ -734,6 +766,67 @@
       if (prototypeShell.getState() !== 'Default') prototypeShell.setState('Default');
     });
 
+    /* ── 멤버와 초대 (더미) ── */
+    const USERS = { 'seok@example.com': '석', 'sun@example.com': '썬', 'song@example.com': '쏭', 'mina@example.com': '미나' };
+    const members = [
+      { email: 'seok@example.com', role: 'owner', status: 'member' },
+      { email: 'sun@example.com', role: 'editor', status: 'member' },
+      { email: 'song@example.com', role: 'editor', status: 'pending' },
+    ];
+    let viewAsMember = false;
+    function renderMembers() {
+      const iAmOwner = !viewAsMember;
+      $('#member-count').textContent = members.filter(m => m.status === 'member').length;
+      $('#member-list').innerHTML = members.map(m => {
+        const name = USERS[m.email];
+        const me = m.email === (viewAsMember ? 'sun@example.com' : 'seok@example.com');
+        const tag = m.role === 'owner' ? '<span class="pill">만든 사람</span>' : m.status === 'pending' ? '<span class="pill wait">수락 대기</span>' : '';
+        const action = iAmOwner && m.role !== 'owner'
+          ? `<button class="btn ghost sm" data-remove="${m.email}" data-component="Button">${m.status === 'pending' ? '초대 취소' : '내보내기'}</button>` : '';
+        return `<li class="member"><span class="avatar">${esc(name[0])}</span>
+          <div class="who">${esc(name)}${me ? ' (나)' : ''}${tag}<small>${esc(m.email)}</small></div>${action}</li>`;
+      }).join('');
+      $('#invite-form').hidden = !iAmOwner;
+      $('#member-note').hidden = iAmOwner;
+    }
+    $('#open-members').onclick = () => { $('#inv-error').hidden = true; $('#inv-email').value = ''; renderMembers(); showScrim($('#members-dialog')); };
+    $('#members-close').onclick = () => hideScrim($('#members-dialog'));
+    $('#members-dialog').addEventListener('click', e => {
+      if (e.target.id === 'members-dialog') { hideScrim($('#members-dialog')); return; }
+      const b = e.target.closest('[data-remove]'); if (!b) return;
+      const i = members.findIndex(m => m.email === b.dataset.remove); if (i >= 0) members.splice(i, 1);
+      renderMembers();
+    });
+    $('#invite-form').addEventListener('submit', e => {
+      e.preventDefault();
+      const email = $('#inv-email').value.trim().toLowerCase(), err = $('#inv-error');
+      const fail = msg => { err.textContent = msg; err.hidden = false; $('#inv-email').setAttribute('aria-invalid', 'true'); };
+      $('#inv-email').removeAttribute('aria-invalid');
+      if (!email) return fail('이메일을 입력해 주세요.');
+      if (!USERS[email]) return fail('가입된 회원이 아닙니다. 가입한 이메일만 초대할 수 있습니다.');
+      const ex = members.find(m => m.email === email);
+      if (ex) return fail(ex.status === 'pending' ? '이미 초대해서 수락을 기다리는 중입니다.' : '이미 이 여행의 멤버입니다.');
+      members.push({ email, role: 'editor', status: 'pending' });
+      err.hidden = true; $('#inv-email').value = ''; renderMembers();
+      toast(`${USERS[email]}님에게 초대를 보냈습니다`);
+    });
+
+    /* 받은 초대 */
+    const invites = [{ id: 1, from: '미나', title: '오키나와 여름 여행', when: '2027. 7. 20 – 7. 23', days: 4 }];
+    function renderInvites() {
+      $('#invites').innerHTML = invites.length ? `<p class="section-label">받은 초대 ${invites.length}</p>` + invites.map(v => `<div class="invite-card" data-component="Card">
+        <div class="t"><b>${esc(v.from)}</b>님이 <b>${esc(v.title)}</b>에 초대했습니다.<div class="muted" style="margin-top:2px">${v.when} · ${v.days}일</div></div>
+        <div class="row" style="justify-content:flex-end"><button class="btn outline sm" data-decline="${v.id}" data-component="Button">거절</button>
+          <button class="btn sm" data-accept="${v.id}" data-component="Button">수락</button></div></div>`).join('') : '';
+    }
+    $('#invites').addEventListener('click', e => {
+      const a = e.target.closest('[data-accept]'), d = e.target.closest('[data-decline]'); if (!a && !d) return;
+      const id = Number((a || d).dataset.accept || (a || d).dataset.decline);
+      const i = invites.findIndex(v => v.id === id); const v = invites[i]; invites.splice(i, 1);
+      if (a) { trips.unshift({ title: v.title, start: v.when.split(' – ')[0], end: v.when.split(' – ')[1], days: v.days, count: () => 0, shared: v.from }); renderTrips(); }
+      renderInvites();
+    });
+
     /* ── 프리셋: 화면 상태를 맞춘다 ── */
     const origSetState = prototypeShell.setState;
     prototypeShell.setState = name => {
@@ -741,7 +834,11 @@
       if (screen === 'trip') {
         if (name === '핀 1개') { activeDay = '2026-12-15'; renderAll(); }
         else if (name === '핀 없음') { activeDay = '2026-12-14'; renderAll(); }
+        viewAsMember = name === '멤버로 볼 때';
+        $('.sh-stage [data-screen="trip"] .app-nav .email').textContent = viewAsMember ? 'sun@example.com' : 'seok@example.com';
+        if (name === '멤버로 볼 때') { renderMembers(); showScrim($('#members-dialog')); } else hideScrim($('#members-dialog'));
       }
+      if (screen === 'trips') { if (name === '받은 초대 없음') invites.length = 0; else if (!invites.length && name === 'Default') invites.push({ id: 1, from: '미나', title: '오키나와 여름 여행', when: '2027. 7. 20 – 7. 23', days: 4 }); renderInvites(); }
       origSetState(name);
     };
     $('#sh-state').onchange = () => prototypeShell.setState($('#sh-state').value);
@@ -777,5 +874,6 @@
     });
 
     renderAll(); renderTrips();
+      renderInvites(); renderMembers();
   })();
 </script>
