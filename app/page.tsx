@@ -12,7 +12,7 @@ export default async function Home() {
   return (
     <>
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">내 여행</h1>
+        <h1 className="text-[22px] font-bold tracking-tight">내 여행</h1>
         <NewTripSheet label="새 여행" />
       </div>
       <ReceivedInvitations invitations={invitations} />

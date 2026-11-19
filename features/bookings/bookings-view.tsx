@@ -54,15 +54,15 @@ export function BookingsView({ tripId, bookings }: { tripId: string; bookings: B
       </div>
 
       {bookings.length ? (
-        <ul className="flex flex-col gap-2">
+        <ul className="divide-y overflow-hidden rounded-2xl bg-card shadow-soft ring-1 ring-foreground/5">
           {bookings.map((b) => (
             <li key={b.id}>
               <button
                 type="button"
                 onClick={() => openDetail(b.id)}
-                className="grid w-full grid-cols-[auto_1fr] items-center gap-3 rounded-2xl bg-card p-3 text-left ring-1 ring-foreground/10"
+                className="grid w-full grid-cols-[auto_1fr] items-center gap-3 px-4 py-3 text-left hover:bg-muted/50"
               >
-                <span className="rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold text-secondary-foreground">{kindLabel(b.kind)}</span>
+                <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">{kindLabel(b.kind)}</span>
                 <span className="min-w-0">
                   <span className="block truncate text-sm font-semibold">{b.title}</span>
                   <span className="block text-xs text-muted-foreground">
@@ -75,7 +75,7 @@ export function BookingsView({ tripId, bookings }: { tripId: string; bookings: B
           ))}
         </ul>
       ) : (
-        <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
+        <div className="flex flex-col items-center gap-2 rounded-2xl bg-muted/70 px-4 py-8 text-center text-sm text-muted-foreground">
           <b className="text-[15px] font-semibold text-foreground">아직 예약이 없습니다</b>
           <span>QR 티켓과 예약 확인 메일을 여기에 모아 두세요.</span>
           <Button size="sm" onClick={() => setForm({ open: true, booking: null })}>

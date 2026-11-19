@@ -47,7 +47,7 @@ export function AllowlistManager({ emails }: { emails: AllowedEmail[] }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <form onSubmit={add} noValidate className="grid gap-2 rounded-2xl bg-card p-4 ring-1 ring-foreground/10">
+      <form onSubmit={add} noValidate className="grid gap-2 rounded-2xl bg-card p-4 shadow-soft ring-1 ring-foreground/5">
         <Label htmlFor="allow-email">가입을 허락할 이메일</Label>
         <div className="flex gap-2">
           <Input
@@ -72,7 +72,7 @@ export function AllowlistManager({ emails }: { emails: AllowedEmail[] }) {
           허용 목록 <span className="font-normal text-muted-foreground">{emails.length}</span>
         </h2>
         {emails.length ? (
-          <ul className="flex flex-col divide-y rounded-2xl bg-card ring-1 ring-foreground/10">
+          <ul className="flex flex-col divide-y rounded-2xl bg-card shadow-soft ring-1 ring-foreground/5">
             {emails.map((x) => (
               <li key={x.email} className="grid grid-cols-[1fr_auto] items-center gap-2 px-3 py-2">
                 <span className="min-w-0 truncate text-sm" title={x.email}>
@@ -96,7 +96,7 @@ export function AllowlistManager({ emails }: { emails: AllowedEmail[] }) {
             ))}
           </ul>
         ) : (
-          <p className="rounded-2xl border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
+          <p className="rounded-2xl bg-muted/70 px-4 py-6 text-center text-sm text-muted-foreground">
             아직 허용한 이메일이 없습니다. 지금은 아무도 새로 가입할 수 없어요.
           </p>
         )}
