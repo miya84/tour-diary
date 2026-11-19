@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { AllowlistManager } from "@/features/admin/allowlist-manager";
+import { PasswordResetForm } from "@/features/admin/password-reset-form";
 import { isAppAdmin, listAllowedEmails } from "@/features/admin/queries";
 import { getCurrentUser } from "@/lib/supabase/server";
 
@@ -21,6 +22,7 @@ export default async function AdminPage() {
         <h1 className="mt-0.5 text-2xl font-semibold tracking-tight">어드민</h1>
       </div>
       <AllowlistManager emails={emails} />
+      <PasswordResetForm />
     </>
   );
 }

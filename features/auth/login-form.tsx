@@ -53,6 +53,7 @@ export function LoginForm() {
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? "로그인하는 중…" : "로그인"}
           </Button>
+          <p className="text-center text-sm text-muted-foreground">비밀번호를 잊었나요? 앱 관리자에게 초기화를 부탁하세요.</p>
           <p className="text-center text-sm text-muted-foreground">
             계정이 없나요?{" "}
             <Link href="/auth/sign-up" className="text-primary underline-offset-4 hover:underline">
