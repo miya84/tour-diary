@@ -33,7 +33,7 @@ export function TripList({
             <p className="text-sm text-muted-foreground">
               {tripPeriodLabel(t.startDate, t.endDate)} · 일정 {t.itemCount}개
             </p>
-            {t.ownerId !== currentUserId && <p className="text-sm text-muted-foreground">초대받은 여행 · 함께 편집</p>}
+            {t.ownerId !== currentUserId && <p className="text-sm text-muted-foreground">{t.ownerNickname}님이 만든 여행 · 함께 편집</p>}
           </Card>
         </Link>
       ))}

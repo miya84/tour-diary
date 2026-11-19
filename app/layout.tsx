@@ -5,6 +5,7 @@ import Link from "next/link";
 import "./globals.css";
 import { LogoutButton } from "@/features/auth/logout-button";
 import { cn } from "@/lib/utils";
+import { getMyProfile } from "@/features/profile/queries";
 import { getCurrentUser } from "@/lib/supabase/server";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
@@ -28,6 +29,7 @@ export const viewport: Viewport = { width: "device-width", initialScale: 1 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const user = await getCurrentUser();
+  const profile = user ? await getMyProfile(user.id) : null;
 
   return (
     <html
@@ -43,7 +45,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             <nav className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
               {user ? (
                 <>
-                  <span className="max-w-40 truncate">{user.email}</span>
+                  <Link href="/profile" className="max-w-40 truncate rounded-full px-3 py-1 text-foreground hover:bg-muted">
+                    {profile?.nickname ?? user.email}
+                  </Link>
                   <LogoutButton />
                 </>
               ) : (

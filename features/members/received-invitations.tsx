@@ -29,7 +29,7 @@ export function ReceivedInvitations({ invitations }: { invitations: Invitation[]
       {invitations.map((v) => (
         <div key={v.tripId} className="flex flex-col gap-3 rounded-2xl bg-primary/5 px-4 py-3.5 ring-1 ring-primary/30">
           <div className="text-sm leading-relaxed">
-            <b className="font-semibold">{v.inviterEmail}</b>님이 <b className="font-semibold">{v.title}</b>에 초대했습니다.
+            <b className="font-semibold">{v.inviterNickname}</b>님이 <b className="font-semibold">{v.title}</b>에 초대했습니다.
             <div className="text-muted-foreground">{tripPeriodLabel(v.startDate, v.endDate)}</div>
           </div>
           <div className="flex justify-end gap-2">

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { getNicknames } from "@/features/profile/queries";
 import { createClient } from "@/lib/supabase/server";
 
 export type TripSummary = {
@@ -8,6 +9,7 @@ export type TripSummary = {
   startDate: string;
   endDate: string;
   ownerId: string;
+  ownerNickname: string;
   itemCount: number;
 };
 
@@ -18,12 +20,14 @@ export async function listMyTrips(): Promise<TripSummary[]> {
     .select("id, title, start_date, end_date, user_id, itinerary_items(count)")
     .order("start_date", { ascending: false });
   if (error) throw error;
+  const nicknames = await getNicknames([...new Set(data.map((t) => t.user_id))]);
   return data.map((t) => ({
     id: t.id,
     title: t.title,
     startDate: t.start_date,
     endDate: t.end_date,
     ownerId: t.user_id,
+    ownerNickname: nicknames[t.user_id] ?? "멤버",
     itemCount: (t.itinerary_items as unknown as { count: number }[])[0]?.count ?? 0,
   }));
 }

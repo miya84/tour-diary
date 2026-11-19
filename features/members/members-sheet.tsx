@@ -65,10 +65,10 @@ export function MembersSheet({
             {members.map((m) => (
               <li key={m.userId} className="grid grid-cols-[32px_1fr_auto] items-center gap-3 py-1.5">
                 <span className="grid size-8 place-items-center rounded-full bg-secondary text-[13px] font-semibold uppercase text-secondary-foreground">
-                  {m.email[0]}
+                  {[...m.nickname][0]}
                 </span>
                 <div className="min-w-0 text-sm font-medium">
-                  <span className="truncate">{m.email}</span>
+                  <span className="truncate">{m.nickname}</span>
                   {m.userId === currentUserId && <span className="text-muted-foreground"> (나)</span>}
                   {m.role === "owner" && <Tag>만든 사람</Tag>}
                   {m.status === "pending" && <Tag accent>수락 대기</Tag>}
