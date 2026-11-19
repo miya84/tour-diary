@@ -1,0 +1,781 @@
+<!--
+  prototype shell: the review chrome every prototype starts from.
+
+  Keep this comment in the prototype you grow from here: it is the contract,
+  and later turns work from that file rather than from this one.
+
+  Contract (extend product screens; keep the review shell):
+  - Product:  .sh-stage contains only end-user product UI. Keep review notes,
+               rationale, instructions, and approval controls in conversation.
+  - Screens:  <section data-screen="slug" data-title="Label"> inside .sh-stage.
+               The selector, arrow keys, and #hash routing build themselves.
+               Use one option per product destination or distinct surface,
+               named by its product role. Keep baselines, variants, comparison
+               labels, steps, indexes, and progress out of names and states.
+               Links may use href="#slug".
+  - States:   "Default" is automatic. A screen declares only representative
+               presets in data-states="Empty,Error". Use natural, screen-specific
+               names. Reserve presets for important multi-step results, forced
+               data or errors, or materially different structure; keep one-click
+               and transient states as interactions. Use data-when="Empty" on
+               preset-only elements. Call prototypeShell.setState("Name") on
+               entry and setState("Default") on exit, including when repeated
+               actions cross a preset condition.
+  - Viewport: "vp (m)" cycles full / 390 / 768. The 390 preset is a
+               fixed-height, internally scrolling phone frame. Start a
+               mobile-first prototype by adding class="sh-vp-390" to <body>
+               (or a bootstrap classList.add before the chrome script runs).
+  - Pinning:  keep in-frame bars (tab bars, CTAs) inside the phone with
+               position: sticky; position: fixed pins to the browser window.
+  - Tokens:   replace the project-tokens block with project tokens copied
+               verbatim. Map differing names to --background, --foreground, and
+               --font afterwards; replace network fonts with a system stack and
+               note that substitution. Without a design system, keep this
+               palette as the finished style. When the project ships dark
+               tokens, copy them under .sh-theme-dark, which the shell sets
+               on both the root element and body, so :root.sh-theme-dark and
+               body.sh-theme-dark work too. A .dark class or a
+               prefers-color-scheme media query copied verbatim would follow
+               the reviewer's system instead of the toggle.
+  - Theme:    the light / dark switch (t) changes the product surface only.
+               It appears only when a .sh-theme-dark rule declares dark tokens,
+               so a prototype without them carries no theme control. Prototypes
+               always load light; the review bar keeps its own dark styling in
+               both themes so it still reads as chrome.
+  - Placeholders: .wf-pic stands in for pictures the prototype has no real
+               files for. Use real text everywhere text belongs.
+
+  - Chrome:   Keep exactly the screen selector, selected-screen state selector,
+               viewport cycle, and theme toggle.
+
+  Self-contained by design: no build, no framework, no network.
+-->
+<meta charset="utf-8">
+<title>여행 수첩 프로토타입</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  /* ── project tokens: copied from app/globals.css (shadcn base-maia, mist) ── */
+  :root {
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.148 0.004 228.8);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.148 0.004 228.8);
+    --primary: oklch(0.488 0.243 264.376);
+    --primary-foreground: oklch(0.97 0.014 254.604);
+    --secondary: oklch(0.967 0.001 286.375);
+    --secondary-foreground: oklch(0.21 0.006 285.885);
+    --muted: oklch(0.963 0.002 197.1);
+    --muted-foreground: oklch(0.56 0.021 213.5);
+    --accent: oklch(0.963 0.002 197.1);
+    --accent-foreground: oklch(0.218 0.008 223.9);
+    --destructive: oklch(0.577 0.245 27.325);
+    --border: oklch(0.925 0.005 214.3);
+    --input: oklch(0.925 0.005 214.3);
+    --ring: oklch(0.723 0.014 214.4);
+    --radius: 0.625rem;
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.148 0.004 228.8);
+    /* 네트워크 폰트(Inter) 대신 시스템 폰트 스택으로 대체했다. */
+    --font: system-ui, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  }
+  .sh-theme-dark {
+    --background: oklch(0.148 0.004 228.8);
+    --foreground: oklch(0.987 0.002 197.1);
+    --card: oklch(0.218 0.008 223.9);
+    --card-foreground: oklch(0.987 0.002 197.1);
+    --popover: oklch(0.218 0.008 223.9);
+    --popover-foreground: oklch(0.987 0.002 197.1);
+    --primary: oklch(0.424 0.199 265.638);
+    --primary-foreground: oklch(0.97 0.014 254.604);
+    --secondary: oklch(0.274 0.006 286.033);
+    --secondary-foreground: oklch(0.985 0 0);
+    --muted: oklch(0.275 0.011 216.9);
+    --muted-foreground: oklch(0.723 0.014 214.4);
+    --accent: oklch(0.275 0.011 216.9);
+    --accent-foreground: oklch(0.987 0.002 197.1);
+    --destructive: oklch(0.704 0.191 22.216);
+    --border: oklch(1 0 0 / 10%);
+    --input: oklch(1 0 0 / 15%);
+    --ring: oklch(0.56 0.021 213.5);
+  }
+
+  /* ── review chrome (sh-*): keep; extend product styles elsewhere ── */
+  * { box-sizing: border-box }
+  body {
+    margin: 0; padding: 0 0 40px;
+    background: var(--background, #f6f6f6); color: var(--foreground, #3a3a3a);
+    font-family: var(--font, system-ui, sans-serif);
+  }
+  .sh-bar {
+    position: sticky; top: 0; z-index: 999;
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    padding: 8px 12px; background: #191a1c; color: #d7d7d7;
+    font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .sh-bar b, .sh-control-label { color: #8a8f98; font-weight: 500 }
+  .sh-control { display: inline-flex; gap: 5px; align-items: center }
+  .sh-bar button {
+    border: 1px solid #3a3d42; background: none; color: inherit;
+    font: inherit; padding: 2px 9px; border-radius: 99px; cursor: pointer;
+  }
+  .sh-bar select {
+    width: 170px; border: 1px solid #3a3d42; background: #232428; color: inherit;
+    font: inherit; padding: 3px 28px 3px 9px; border-radius: 7px; cursor: pointer;
+    color-scheme: dark;
+  }
+  #sh-screen { width: 190px }
+  .sh-bar button.on { background: #d7d7d7; color: #191a1c; border-color: #d7d7d7 }
+  .sh-theme { display: inline-flex; border: 1px solid #3a3d42; border-radius: 99px; overflow: hidden }
+  .sh-theme button { border: 0; border-radius: 0; padding: 2px 10px }
+  .sh-spacer { flex: 1 }
+  .sh-stage { max-width: 960px; margin: 0 auto; padding: 12px 16px 0 }
+  [hidden] { display: none !important }
+
+  /* viewport presets */
+  .sh-vp-390 .sh-stage {
+    max-width: 390px; background: var(--background, #f6f6f6);
+    border: 10px solid #191a1c; border-radius: 28px;
+    padding: 16px 12px; height: min(844px, calc(100dvh - 52px));
+    overflow-y: auto; margin-top: 12px;
+  }
+  .sh-vp-768 .sh-stage {
+    max-width: 768px; border: 1px solid #c4c4c4; border-radius: 12px;
+    padding: 16px; margin-top: 12px;
+  }
+
+  /* placeholders */
+  .wf-pic  { border-radius: 4px; background:
+             repeating-linear-gradient(45deg, #e9e9e9, #e9e9e9 6px, #f2f2f2 6px, #f2f2f2 12px) }
+  .sh-theme-dark .wf-pic { background: repeating-linear-gradient(45deg,
+             color-mix(in srgb, var(--foreground) 16%, transparent) 0 6px,
+             color-mix(in srgb, var(--foreground) 8%, transparent) 6px 12px) }
+
+  /* ── product styles (shadcn 컴포넌트 문법을 따른다) ── */
+  .app { display: flex; flex-direction: column; gap: 16px; min-height: 100%; }
+  .app-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .app-title { font-weight: 600; font-size: 15px; letter-spacing: -0.01em; color: var(--foreground); text-decoration: none }
+  .app-nav { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted-foreground) }
+  .app-nav .email { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+  .page-title { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; margin: 0; }
+  .muted { color: var(--muted-foreground); font-size: 13px }
+  .stack { display: flex; flex-direction: column; gap: 12px }
+  .row { display: flex; align-items: center; gap: 8px }
+  .grow { flex: 1; min-width: 0 }
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 36px; padding: 0 14px;
+    border-radius: 999px; border: 1px solid transparent; font: 500 14px var(--font); cursor: pointer;
+    background: var(--primary); color: var(--primary-foreground); text-decoration: none; white-space: nowrap }
+  .btn:hover { opacity: .9 }
+  .btn.outline { background: color-mix(in oklch, var(--input) 30%, transparent); border-color: var(--border); color: var(--foreground) }
+  .btn.ghost { background: transparent; color: var(--foreground) }
+  .btn.ghost:hover { background: var(--muted) }
+  .btn.destructive { background: color-mix(in oklch, var(--destructive) 10%, transparent); color: var(--destructive) }
+  .btn.sm { height: 30px; padding: 0 11px; font-size: 13px }
+  .btn.icon { width: 30px; height: 30px; padding: 0 }
+  .btn.block { width: 100% }
+
+  .card { background: var(--card); color: var(--card-foreground); border-radius: 18px; padding: 16px;
+    box-shadow: 0 0 0 1px color-mix(in oklch, var(--foreground) 10%, transparent) }
+  .card h3 { margin: 0 0 2px; font-size: 16px; font-weight: 600 }
+  .field { display: flex; flex-direction: column; gap: 6px }
+  .label { font-size: 13px; font-weight: 500 }
+  .label .opt { color: var(--muted-foreground); font-weight: 400; margin-left: 4px }
+  .input { width: 100%; height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--input);
+    background: color-mix(in oklch, var(--input) 30%, transparent); color: var(--foreground); font: 14px var(--font); outline: none }
+  textarea.input { height: 64px; padding: 10px 14px; border-radius: 18px; resize: none }
+  .input:focus-visible { border-color: var(--ring); box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 50%, transparent) }
+  .input[aria-invalid="true"] { border-color: var(--destructive) }
+  .error { color: var(--destructive); font-size: 13px; margin: 0 }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px }
+
+  .trip-link { display: block; text-decoration: none; color: inherit }
+  .trip-link .meta { display: flex; gap: 8px; margin-top: 6px; font-size: 13px; color: var(--muted-foreground) }
+  .empty { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; padding: 28px 16px;
+    border-radius: 18px; border: 1px dashed var(--border); color: var(--muted-foreground); font-size: 14px }
+  .empty b { color: var(--foreground); font-weight: 600; font-size: 15px }
+
+  .tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none }
+  .tab { flex: none; display: flex; flex-direction: column; align-items: center; min-width: 64px; padding: 7px 10px; border-radius: 16px;
+    border: 1px solid var(--border); background: transparent; color: var(--foreground); font: 12px var(--font); cursor: pointer; line-height: 1.35 }
+  .tab b { font-size: 11px; font-weight: 600; color: var(--muted-foreground) }
+  .tab[aria-selected="true"] { background: var(--primary); border-color: var(--primary); color: var(--primary-foreground) }
+  .tab[aria-selected="true"] b { color: color-mix(in oklch, var(--primary-foreground) 75%, transparent) }
+
+  .map { position: relative; width: 100%; aspect-ratio: 4 / 3; border-radius: 18px; overflow: hidden;
+    box-shadow: 0 0 0 1px color-mix(in oklch, var(--foreground) 10%, transparent); background: #e8efe6 }
+  .map svg { width: 100%; height: 100%; display: block }
+  .map-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+    text-align: center; padding: 20px; background: var(--muted); color: var(--muted-foreground); font-size: 14px }
+  .map-empty b { color: var(--foreground); font-size: 15px }
+  .map-count { position: absolute; left: 10px; top: 10px; background: var(--card); color: var(--foreground); font-size: 12px; font-weight: 500;
+    padding: 4px 10px; border-radius: 999px; box-shadow: 0 0 0 1px color-mix(in oklch, var(--foreground) 12%, transparent) }
+
+  .section-head { display: flex; align-items: center; justify-content: space-between }
+  .section-head h2 { margin: 0; font-size: 16px; font-weight: 600 }
+  .items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px }
+  .item { display: grid; grid-template-columns: 28px 1fr auto; gap: 10px; align-items: start; padding: 12px; border-radius: 16px;
+    background: var(--card); box-shadow: 0 0 0 1px color-mix(in oklch, var(--foreground) 10%, transparent) }
+  .badge { width: 26px; height: 26px; border-radius: 999px; display: grid; place-items: center; font-size: 12px; font-weight: 600;
+    background: var(--primary); color: var(--primary-foreground) }
+  .badge.none { background: var(--muted); color: var(--muted-foreground); font-weight: 500 }
+  .item-title { font-size: 14px; font-weight: 600; line-height: 1.35 }
+  .item-sub { font-size: 12px; color: var(--muted-foreground); margin-top: 2px; line-height: 1.45 }
+  .item-time { font-size: 12px; color: var(--muted-foreground); font-variant-numeric: tabular-nums }
+  .item-links { display: flex; gap: 10px; margin-top: 6px; font-size: 12px }
+  .item-links a { color: var(--primary); text-decoration: none; font-weight: 500 }
+  .tag { display: inline-block; font-size: 11px; padding: 1px 8px; border-radius: 999px; background: var(--muted); color: var(--muted-foreground); margin-top: 6px }
+
+  .scrim { position: absolute; inset: 0; background: color-mix(in oklch, black 40%, transparent); display: flex; align-items: flex-end; z-index: 20 }
+  .sheet { width: 100%; max-height: 92%; overflow-y: auto; background: var(--popover); color: var(--popover-foreground);
+    border-radius: 22px 22px 0 0; padding: 18px 16px 20px; display: flex; flex-direction: column; gap: 14px }
+  .sheet h3 { margin: 0; font-size: 17px; font-weight: 600 }
+  .suggest { list-style: none; margin: 4px 0 0; padding: 4px; border-radius: 16px; background: var(--popover);
+    box-shadow: 0 0 0 1px color-mix(in oklch, var(--foreground) 12%, transparent), 0 6px 18px rgb(0 0 0 / 8%) }
+  .suggest li { padding: 8px 10px; border-radius: 12px; cursor: pointer; font-size: 14px }
+  .suggest li:hover { background: var(--muted) }
+  .suggest small { display: block; color: var(--muted-foreground); font-size: 12px }
+  .chip { display: inline-flex; align-items: center; gap: 8px; padding: 6px 8px 6px 12px; border-radius: 999px; background: var(--muted); font-size: 13px; max-width: 100% }
+  .chip button { border: 0; background: none; cursor: pointer; color: var(--muted-foreground); font-size: 14px; line-height: 1 }
+  .toast { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 30; background: var(--foreground); color: var(--background);
+    font-size: 13px; padding: 8px 14px; border-radius: 999px; white-space: nowrap }
+  .stage-rel { position: relative }
+  [data-screen] { position: relative; min-height: 100% }
+
+  .handle { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 999px; color: var(--muted-foreground);
+    cursor: grab; touch-action: none; user-select: none; font-size: 16px; letter-spacing: -2px }
+  .handle:hover { background: var(--muted) }
+  .items.reordering { user-select: none; -webkit-user-select: none }
+  .items.reordering .item { box-shadow: 0 0 0 1px color-mix(in oklch, var(--primary) 35%, transparent) }
+  .item.dragging { background: var(--accent); box-shadow: 0 0 0 2px var(--primary), 0 8px 20px rgb(0 0 0 / 14%); position: relative; z-index: 2 }
+  .item.dragging .handle { cursor: grabbing }
+</style>
+
+<header class="sh-bar">
+  <b>proto</b>
+  <label class="sh-control"><span class="sh-control-label">screen</span><select id="sh-screen"></select></label>
+  <span class="sh-spacer"></span>
+  <label class="sh-control"><span class="sh-control-label">state</span><select id="sh-state"></select></label>
+  <button id="sh-vp">vp: full (m)</button>
+  <div class="sh-theme" id="sh-theme" role="group" aria-label="theme (t)" hidden>
+    <button data-theme="light">light</button><button data-theme="dark">dark</button>
+  </div>
+</header>
+
+<script>document.body.classList.add("sh-vp-390")</script>
+<main class="sh-stage">
+  <!-- 1. 로그인 -->
+  <section data-screen="login" data-title="로그인" data-states="로그인 실패">
+    <div class="app">
+      <header class="app-header">
+        <a class="app-title" href="#login">여행 수첩</a>
+        <nav class="app-nav"><a class="btn ghost sm" href="#login" data-component="Button">로그인</a></nav>
+      </header>
+      <div class="card stack" data-component="Card">
+        <div><h3>로그인</h3><p class="muted" style="margin:2px 0 0">이메일과 비밀번호로 들어옵니다.</p></div>
+        <form class="stack" onsubmit="event.preventDefault(); location.hash='trips'">
+          <div class="field"><label class="label" for="l-email">이메일</label>
+            <input class="input" id="l-email" type="email" value="seok@example.com" data-component="Input"></div>
+          <div class="field"><label class="label" for="l-pw">비밀번호</label>
+            <input class="input" id="l-pw" type="password" value="password123" data-component="Input"></div>
+          <p class="error" data-when="로그인 실패" hidden>이메일 또는 비밀번호가 올바르지 않습니다.</p>
+          <button class="btn block" type="submit" data-component="Button">로그인</button>
+        </form>
+        <p class="muted" style="text-align:center;margin:0">계정이 없나요? <a href="#signup" style="color:var(--primary)">가입하기</a></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. 가입 -->
+  <section data-screen="signup" data-title="가입" data-states="비밀번호 불일치">
+    <div class="app">
+      <header class="app-header">
+        <a class="app-title" href="#login">여행 수첩</a>
+        <nav class="app-nav"><a class="btn ghost sm" href="#login" data-component="Button">로그인</a></nav>
+      </header>
+      <div class="card stack" data-component="Card">
+        <div><h3>가입</h3><p class="muted" style="margin:2px 0 0">가입하면 바로 로그인됩니다.</p></div>
+        <form class="stack" onsubmit="event.preventDefault(); location.hash='trips'">
+          <div class="field"><label class="label" for="s-email">이메일</label>
+            <input class="input" id="s-email" type="email" placeholder="you@example.com" data-component="Input"></div>
+          <div class="field"><label class="label" for="s-pw">비밀번호</label>
+            <input class="input" id="s-pw" type="password" data-component="Input"></div>
+          <div class="field"><label class="label" for="s-pw2">비밀번호 확인</label>
+            <input class="input" id="s-pw2" type="password" data-component="Input"></div>
+          <p class="error" data-when="비밀번호 불일치" hidden>비밀번호가 서로 다릅니다.</p>
+          <button class="btn block" type="submit" data-component="Button">가입하기</button>
+        </form>
+        <p class="muted" style="text-align:center;margin:0">이미 계정이 있나요? <a href="#login" style="color:var(--primary)">로그인</a></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. 내 여행 목록 -->
+  <section data-screen="trips" data-title="내 여행" data-states="여행 없음">
+    <div class="app">
+      <header class="app-header">
+        <a class="app-title" href="#trips">여행 수첩</a>
+        <nav class="app-nav"><span class="email">seok@example.com</span>
+          <a class="btn outline sm" href="#login" data-component="Button">로그아웃</a></nav>
+      </header>
+      <div class="section-head">
+        <h1 class="page-title">내 여행</h1>
+        <button class="btn sm" id="open-new-trip" data-component="Button">새 여행</button>
+      </div>
+      <div class="stack" id="trip-list" data-when="Default"></div>
+      <div class="empty" data-when="여행 없음" hidden data-component="Empty">
+        <b>아직 만든 여행이 없습니다</b>
+        <span>제목과 날짜만 정하면 바로 시작할 수 있어요.</span>
+        <button class="btn sm" data-open-new-trip data-component="Button">첫 여행 만들기</button>
+      </div>
+
+      <div class="scrim" id="new-trip-dialog" hidden>
+        <form class="sheet" id="new-trip-form" data-component="Dialog" novalidate>
+          <h3>새 여행 만들기</h3>
+          <div class="field"><label class="label" for="nt-title">제목</label>
+            <input class="input" id="nt-title" placeholder="예: 후쿠오카 12월" data-component="Input"></div>
+          <div class="two">
+            <div class="field"><label class="label" for="nt-start">시작일</label>
+              <input class="input" id="nt-start" type="date" value="2026-12-12" data-component="Input"></div>
+            <div class="field"><label class="label" for="nt-end">종료일</label>
+              <input class="input" id="nt-end" type="date" value="2026-12-15" data-component="Input"></div>
+          </div>
+          <p class="error" id="nt-error" hidden></p>
+          <div class="row" style="justify-content:flex-end">
+            <button class="btn outline" type="button" id="nt-cancel" data-component="Button">취소</button>
+            <button class="btn" type="submit" data-component="Button">만들기</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. 여행 화면 -->
+  <section data-screen="trip" data-title="여행: 하루 동선" data-states="핀 1개,핀 없음">
+    <div class="app">
+      <header class="app-header">
+        <a class="app-title" href="#trips">여행 수첩</a>
+        <nav class="app-nav"><span class="email">seok@example.com</span>
+          <a class="btn outline sm" href="#login" data-component="Button">로그아웃</a></nav>
+      </header>
+      <div>
+        <a class="muted" href="#trips" style="text-decoration:none">← 내 여행</a>
+        <h1 class="page-title" style="margin-top:2px">후쿠오카 12월</h1>
+        <div class="muted">2026. 12. 12 – 12. 15 · 3박 4일</div>
+      </div>
+      <div class="tabs" id="day-tabs" role="tablist" data-component="Tabs"></div>
+
+      <div class="map" id="map" data-component="new:DayRouteMap"></div>
+
+      <div class="section-head">
+        <h2 id="day-heading">12월 12일 · 토요일</h2>
+        <div class="row">
+          <button class="btn outline sm" id="reorder-toggle" data-component="Button">순서 변경</button>
+          <button class="btn sm" id="add-item" data-component="Button">＋ 일정 추가</button>
+        </div>
+      </div>
+      <p class="muted" id="reorder-hint" hidden style="margin:-4px 0 0">오른쪽 손잡이를 끌어서 순서를 바꾸세요. 지도 번호도 함께 바뀝니다.</p>
+      <ul class="items" id="items"></ul>
+      <div class="empty" id="items-empty" hidden data-component="Empty">
+        <b>이 날은 아직 일정이 없습니다</b>
+        <span>일정을 추가하면 장소가 있는 항목이 지도에 나타납니다.</span>
+      </div>
+
+      <div class="scrim" id="item-dialog" hidden>
+        <form class="sheet" id="item-form" data-component="Dialog" novalidate>
+          <h3 id="item-form-title">일정 추가</h3>
+          <div class="field"><label class="label" for="it-title">제목</label>
+            <input class="input" id="it-title" placeholder="예: 기린코 호수 산책" data-component="Input">
+            <p class="error" id="it-error" hidden>제목을 입력해 주세요.</p></div>
+          <div class="field" id="place-field"><label class="label" for="it-place">장소<span class="opt">선택</span></label>
+            <div id="place-chip" hidden></div>
+            <div id="place-search">
+              <input class="input" id="it-place" placeholder="장소 이름을 검색하세요 (예: Lake Kinrin)" autocomplete="off" data-component="Input">
+              <ul class="suggest" id="suggest" hidden></ul>
+            </div>
+          </div>
+          <div class="two">
+            <div class="field"><label class="label" for="it-time">시작 시간<span class="opt">선택</span></label>
+              <input class="input" id="it-time" type="time" data-component="Input"></div>
+            <div class="field"><label class="label" for="it-day">날짜</label>
+              <select class="input" id="it-day" data-component="Input"></select></div>
+          </div>
+          <div class="field"><label class="label" for="it-note">메모<span class="opt">선택</span></label>
+            <textarea class="input" id="it-note" placeholder="예약 번호, 먹을 것, 주의할 점" data-component="Textarea"></textarea></div>
+          <div class="row">
+            <button class="btn destructive" type="button" id="it-delete" hidden data-component="Button">삭제</button>
+            <span class="grow"></span>
+            <button class="btn outline" type="button" id="it-cancel" data-component="Button">취소</button>
+            <button class="btn" type="submit" data-component="Button">저장</button>
+          </div>
+        </form>
+      </div>
+      <div class="toast" id="toast" hidden></div>
+    </div>
+  </section>
+</main>
+
+<script>
+  const stage = document.querySelector('.sh-stage');
+  const screens = [...stage.querySelectorAll('[data-screen]')];
+  const screenSelect = document.getElementById('sh-screen');
+  const stateSelect = document.getElementById('sh-state');
+  const vpBtn = document.getElementById('sh-vp');
+  const themeCtl = document.getElementById('sh-theme');
+  const themeBtns = [...themeCtl.querySelectorAll('button')];
+  let current = null;
+  let currentStates = [];
+
+  screens.forEach(s => {
+    const option = document.createElement('option');
+    option.textContent = s.dataset.title || s.dataset.screen;
+    option.value = s.dataset.screen;
+    screenSelect.append(option);
+  });
+  screenSelect.onchange = () => show(screenSelect.value);
+
+  function show(slug) {
+    current = screens.find(s => s.dataset.screen === slug) || screens[0];
+    screens.forEach(s => s.hidden = s !== current);
+    screenSelect.value = current.dataset.screen;
+    history.replaceState(null, '', '#' + current.dataset.screen);
+    buildStates();
+  }
+
+  function buildStates() {
+    const declared = (current.dataset.states || '').split(',').map(x => x.trim()).filter(Boolean);
+    currentStates = ['Default', ...declared.filter(name => name !== 'Default')];
+    stateSelect.innerHTML = '';
+    currentStates.forEach(name => {
+      const option = document.createElement('option');
+      option.textContent = name;
+      option.value = name;
+      stateSelect.append(option);
+    });
+    applyState('Default');
+  }
+
+  function applyState(name) {
+    const active = currentStates.includes(name) ? name : 'Default';
+    current.querySelectorAll('[data-when]').forEach(el => {
+      el.hidden = !el.dataset.when.split(',').map(x => x.trim()).includes(active);
+    });
+    stateSelect.value = active;
+  }
+  stateSelect.onchange = () => applyState(stateSelect.value);
+
+  window.prototypeShell = {
+    showScreen: show,
+    setState: applyState,
+    getScreen: () => current?.dataset.screen,
+    getState: () => stateSelect.value
+  };
+
+  const VPS = ['full', '390', '768'];
+  let vp = VPS.find(v => document.body.classList.contains('sh-vp-' + v)) || 'full';
+  function applyVp() {
+    VPS.forEach(v => document.body.classList.toggle('sh-vp-' + v, v === vp && v !== 'full'));
+    vpBtn.textContent = 'vp: ' + vp + ' (m)';
+    vpBtn.classList.toggle('on', vp !== 'full');
+  }
+  vpBtn.onclick = () => { vp = VPS[(VPS.indexOf(vp) + 1) % VPS.length]; applyVp(); };
+  applyVp();
+
+  const hasDark = [...document.styleSheets].some(sheet => {
+    try {
+      return [...sheet.cssRules].some(rule => (rule.selectorText || '')
+        .split(',').some(part => /\.sh-theme-dark$/.test(part.trim())));
+    } catch { return false }
+  });
+  let dark = false;
+  function applyTheme() {
+    document.documentElement.classList.toggle('sh-theme-dark', dark);
+    document.body.classList.toggle('sh-theme-dark', dark);
+    themeBtns.forEach(b => b.classList.toggle('on', (b.dataset.theme === 'dark') === dark));
+  }
+  themeCtl.hidden = !hasDark;
+  themeBtns.forEach(b => b.onclick = () => { dark = b.dataset.theme === 'dark'; applyTheme(); });
+  applyTheme();
+
+  addEventListener('keydown', e => {
+    if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+    const i = screens.indexOf(current);
+    if (e.key === 'ArrowRight') show(screens[(i + 1) % screens.length].dataset.screen);
+    if (e.key === 'ArrowLeft') show(screens[(i - 1 + screens.length) % screens.length].dataset.screen);
+    if (e.key === 'm') vpBtn.click();
+    if (e.key === 't' && !themeCtl.hidden) { dark = !dark; applyTheme(); }
+  });
+
+  addEventListener('hashchange', () => show(location.hash.slice(1)));
+  show(location.hash.slice(1));
+</script>
+<script>
+  /* ── product interactions (dummy data only) ── */
+  (() => {
+    const $ = (s, r = document) => r.querySelector(s);
+    const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    /* 시트는 보이는 영역(폰 프레임이면 프레임 안)에 붙인다 */
+    function showScrim(el) {
+      const stageEl = document.querySelector('.sh-stage');
+      const framed = document.body.classList.contains('sh-vp-390');
+      el.hidden = false;
+      if (framed) {
+        const sr = stageEl.getBoundingClientRect(), pr = el.parentElement.getBoundingClientRect();
+        Object.assign(el.style, { position: 'absolute', inset: 'auto', top: (sr.top + stageEl.clientTop - pr.top) + 'px', left: (sr.left + stageEl.clientLeft - pr.left) + 'px', width: stageEl.clientWidth + 'px', height: stageEl.clientHeight + 'px' });
+        stageEl.style.overflowY = 'hidden';
+      } else {
+        Object.assign(el.style, { position: 'fixed', inset: '0', top: '', left: '', width: '', height: '' });
+      }
+    }
+    function hideScrim(el) { el.hidden = true; document.querySelector('.sh-stage').style.overflowY = ''; }
+    const DOW = ['일', '월', '화', '수', '목', '금', '토'];
+
+    /* 장소 후보(더미). x, y는 지도 좌표(0–100, 0–75) */
+    const PLACES = [
+      { id: 'p1', name: '유후인 코토부키 하나노쇼', sub: '大分県由布市湯布院町', x: 66, y: 22 },
+      { id: 'p2', name: '이온 유후인점', sub: 'AEON 湯布院店', x: 46, y: 50 },
+      { id: 'p3', name: '동구리노모리', sub: 'どんぐりの森 · 湯布院', x: 30, y: 36 },
+      { id: 'p4', name: '플로랄빌리지', sub: 'フローラルヴィレッジ · 湯布院', x: 54, y: 42 },
+      { id: 'p5', name: 'THE HIDEOUT', sub: '湯布院 · 소품 가게', x: 60, y: 47 },
+      { id: 'p6', name: '금상 고로케', sub: '金賞コロッケ · 湯布院', x: 50, y: 45 },
+      { id: 'p7', name: '기린코 호수 (Lake Kinrin)', sub: '金鱗湖 · 由布市', x: 74, y: 56 },
+      { id: 'p8', name: '후쿠오카 공항 (FUK)', sub: '福岡空港 · 国内線', x: 18, y: 64 },
+      { id: 'p9', name: '하카타역', sub: '博多駅', x: 34, y: 60 },
+    ];
+    const P = id => PLACES.find(p => p.id === id);
+
+    const days = ['2026-12-12', '2026-12-13', '2026-12-14', '2026-12-15'];
+    let seq = 100;
+    const mk = (day, title, time, note, place) => ({ id: ++seq, day, title, time, note, place });
+    const items = [
+      mk('2026-12-12', '후쿠오카행 항공 (석 · 썬, 이스타)', '08:40', '10:20 도착', null),
+      mk('2026-12-12', '공항 → 유후인 버스', '12:08', '120분 · 예약 완료', null),
+      mk('2026-12-12', '유후인 코토부키 하나노쇼 체크인', '', '짐 맡기기 · 마운틴뷰 · 석식(가이세키), 조식 포함', 'p1'),
+      mk('2026-12-12', '이온 유후인점 ATM', '', '현금 인출 후 소품샵 거리 산책', 'p2'),
+      mk('2026-12-12', '동구리노모리', '', '점심', 'p3'),
+      mk('2026-12-12', '플로랄빌리지', '', '귀여운 캐릭터 굿즈 판매', 'p4'),
+      mk('2026-12-12', 'THE HIDEOUT', '', '해리포터 분위기 가게', 'p5'),
+      mk('2026-12-12', '금상 고로케', '', '주변 음식', 'p6'),
+      mk('2026-12-12', '기린코 호수 산책', '', '', 'p7'),
+      mk('2026-12-12', '이온 유후인점', '', '저녁 간식, 음료', 'p2'),
+      mk('2026-12-12', '숙소 가이세키 · 온천', '19:00', '', 'p1'),
+      mk('2026-12-13', '체크아웃', '10:00', '', null),
+      mk('2026-12-13', '자유 시간', '', '날씨 보고 정하기', null),
+      mk('2026-12-15', '후쿠오카 공항 (FUK)', '09:30', '티웨이 · 쏭', 'p8'),
+      mk('2026-12-15', '집으로', '', '', null),
+    ];
+    let activeDay = days[0];
+    let reordering = false;
+    let editing = null;   // 편집 중인 항목 id, 새 항목이면 'new'
+    let pickedPlace = null;
+
+    const dayLabel = d => { const dt = new Date(d + 'T00:00:00'); return { md: `${dt.getMonth() + 1}.${dt.getDate()}`, dow: DOW[dt.getDay()], full: `${dt.getMonth() + 1}월 ${dt.getDate()}일 · ${DOW[dt.getDay()]}요일` }; };
+    const dayItems = d => items.filter(i => i.day === d);
+
+    /* ── 날짜 탭 ── */
+    function renderTabs() {
+      $('#day-tabs').innerHTML = days.map((d, i) => {
+        const l = dayLabel(d);
+        return `<button class="tab" role="tab" data-day="${d}" aria-selected="${d === activeDay}"><b>DAY ${i + 1}</b>${l.md} ${l.dow}</button>`;
+      }).join('');
+    }
+    $('#day-tabs').addEventListener('click', e => {
+      const b = e.target.closest('[data-day]'); if (!b) return;
+      selectDay(b.dataset.day);
+    });
+    function selectDay(d) {
+      activeDay = d; reordering = false;
+      renderAll();
+      const st = prototypeShell.getState();
+      if (st !== 'Default') prototypeShell.setState('Default');
+    }
+
+    /* ── 지도 (더미 그림): 핀이 모두 보이도록 영역을 맞춘다 ── */
+    function renderMap() {
+      const pins = dayItems(activeDay).filter(i => i.place).map(i => ({ ...P(i.place), item: i }));
+      const el = $('#map');
+      const decor = `
+        <rect x="-60" y="-60" width="220" height="200" fill="#e8efe6"/>
+        <path d="M-60 20 Q10 10 40 30 T110 25 L160 30 L160 -60 L-60 -60Z" fill="#dfe8dc"/>
+        <ellipse cx="74" cy="60" rx="9" ry="6" fill="#bcd8ea"/>
+        <path d="M-60 52 L30 48 L60 58 L160 52" stroke="#fff" stroke-width="3.2" fill="none"/>
+        <path d="M40 -60 L44 30 L48 140" stroke="#fff" stroke-width="2.6" fill="none"/>
+        <path d="M-60 30 L160 40" stroke="#f3efe0" stroke-width="1.8" fill="none"/>
+        <path d="M20 -60 L10 140" stroke="#f3efe0" stroke-width="1.4" fill="none"/>
+        <path d="M80 -60 L90 140" stroke="#f3efe0" stroke-width="1.4" fill="none"/>`;
+      if (!pins.length) {
+        el.innerHTML = `<svg viewBox="0 0 100 75" preserveAspectRatio="xMidYMid slice">${decor}</svg>
+          <div class="map-empty"><b>지도에 표시할 장소가 없습니다</b><span>일정에 장소를 추가하면 하루 동선이 여기에 그려집니다.</span></div>`;
+        return;
+      }
+      let minX = Math.min(...pins.map(p => p.x)), maxX = Math.max(...pins.map(p => p.x));
+      let minY = Math.min(...pins.map(p => p.y)), maxY = Math.max(...pins.map(p => p.y));
+      let w = Math.max(maxX - minX, 12) + 22, h = Math.max(maxY - minY, 9) + 18;
+      if (w / h < 4 / 3) w = h * 4 / 3; else h = w * 3 / 4;
+      const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+      const vb = `${(cx - w / 2).toFixed(1)} ${(cy - h / 2).toFixed(1)} ${w.toFixed(1)} ${h.toFixed(1)}`;
+      const r = w / 100 * 3.4;
+      const line = pins.length > 1 ? `<polyline points="${pins.map(p => `${p.x},${p.y}`).join(' ')}" fill="none" stroke="oklch(0.488 0.243 264.376)" stroke-width="${(r * .28).toFixed(2)}" stroke-linejoin="round" stroke-linecap="round" opacity=".85"/>` : '';
+      const dots = pins.map((p, i) => `<g><circle cx="${p.x}" cy="${p.y}" r="${r}" fill="oklch(0.488 0.243 264.376)" stroke="#fff" stroke-width="${(r * .22).toFixed(2)}"/>
+        <text x="${p.x}" y="${(p.y + r * .36).toFixed(2)}" text-anchor="middle" font-size="${(r * 1.05).toFixed(2)}" font-weight="600" fill="#fff" font-family="system-ui">${i + 1}</text></g>`).join('');
+      el.innerHTML = `<svg viewBox="${vb}" preserveAspectRatio="xMidYMid meet">${decor}${line}${dots}</svg>
+        <div class="map-count">핀 ${pins.length}곳${pins.length > 1 ? ' · 순서대로 연결' : ''}</div>`;
+    }
+
+    /* ── 일정 목록 ── */
+    function renderItems() {
+      $('#day-heading').textContent = dayLabel(activeDay).full;
+      const list = dayItems(activeDay);
+      let n = 0;
+      $('#items').innerHTML = list.map(i => {
+        const pl = i.place ? P(i.place) : null;
+        const num = pl ? `<span class="badge">${++n}</span>` : `<span class="badge none" title="장소 없음">–</span>`;
+        const sub = [i.time && `<span class="item-time">${esc(i.time)}</span>`, esc(i.note)].filter(Boolean).join(' · ');
+        return `<li class="item" data-id="${i.id}">${num}
+          <div><div class="item-title">${esc(i.title)}</div>
+            ${pl ? `<div class="item-sub">📍 ${esc(pl.name)}</div>` : `<span class="tag">장소 없음 · 지도에 안 나옴</span>`}
+            ${sub ? `<div class="item-sub">${sub}</div>` : ''}
+            ${pl && !reordering ? `<div class="item-links"><a href="#" data-maplink="${esc(pl.name)}">지도 열기 ↗</a></div>` : ''}</div>
+          ${reordering ? `<span class="handle" data-handle="${i.id}" role="button" aria-label="끌어서 순서 변경" title="끌어서 순서 변경">⠿</span>` : `<button class="btn ghost icon" data-edit="${i.id}" aria-label="수정">✎</button>`}</li>`;
+      }).join('');
+      $('#items-empty').hidden = list.length > 0;
+      $('#items').hidden = list.length === 0;
+      $('#items').classList.toggle('reordering', reordering);
+      const tg = $('#reorder-toggle');
+      tg.hidden = list.length < 2 && !reordering;
+      tg.textContent = reordering ? '완료' : '순서 변경';
+      tg.className = 'btn sm' + (reordering ? '' : ' outline');
+      $('#add-item').hidden = reordering;
+      $('#reorder-hint').hidden = !reordering;
+    }
+
+    function renderAll() { renderTabs(); renderMap(); renderItems(); }
+
+    let toastTimer;
+    function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, 2200); }
+    $('#items').addEventListener('click', e => {
+      const m = e.target.closest('[data-maplink]');
+      if (m) { e.preventDefault(); toast(`구글 지도에서 "${m.dataset.maplink}"를 엽니다`); return; }
+      const b = e.target.closest('[data-edit]');
+      if (b) openItemForm(Number(b.dataset.edit));
+    });
+
+    /* ── 일정 추가·수정 ── */
+    function setPlace(p) {
+      pickedPlace = p;
+      $('#place-chip').hidden = !p; $('#place-search').hidden = !!p;
+      $('#place-chip').innerHTML = p ? `<span class="chip">📍 ${esc(p.name)}<button type="button" id="place-clear" aria-label="장소 빼기">✕</button></span>` : '';
+      $('#suggest').hidden = true;
+    }
+    function openItemForm(id) {
+      editing = id;
+      const it = id === 'new' ? null : items.find(x => x.id === id);
+      $('#item-form-title').textContent = it ? '일정 수정' : '일정 추가';
+      $('#it-title').value = it?.title ?? ''; $('#it-time').value = it?.time ?? ''; $('#it-note').value = it?.note ?? '';
+      $('#it-day').innerHTML = days.map(d => `<option value="${d}" ${d === (it?.day ?? activeDay) ? 'selected' : ''}>${dayLabel(d).md} (${dayLabel(d).dow})</option>`).join('');
+      $('#it-title').removeAttribute('aria-invalid'); $('#it-error').hidden = true;
+      $('#it-delete').hidden = !it; $('#it-place').value = '';
+      setPlace(it?.place ? P(it.place) : null);
+      showScrim($('#item-dialog')); $('#it-title').focus();
+    }
+    const closeItemForm = () => { hideScrim($('#item-dialog')); editing = null; };
+    $('#add-item').onclick = () => openItemForm('new');
+    $('#it-cancel').onclick = closeItemForm;
+    $('#item-dialog').addEventListener('click', e => { if (e.target.id === 'item-dialog') closeItemForm(); });
+    $('#place-field').addEventListener('click', e => { if (e.target.id === 'place-clear') setPlace(null); });
+    $('#it-place').addEventListener('input', e => {
+      const q = e.target.value.trim().toLowerCase();
+      const hits = q ? PLACES.filter(p => (p.name + ' ' + p.sub).toLowerCase().includes(q)) : [];
+      const ul = $('#suggest');
+      ul.hidden = !q;
+      ul.innerHTML = hits.length ? hits.map(p => `<li data-pid="${p.id}">${esc(p.name)}<small>${esc(p.sub)}</small></li>`).join('') : '<li style="cursor:default;color:var(--muted-foreground)">검색 결과가 없습니다</li>';
+    });
+    $('#suggest').addEventListener('click', e => { const li = e.target.closest('[data-pid]'); if (li) setPlace(P(li.dataset.pid)); });
+    $('#it-delete').onclick = () => {
+      const i = items.findIndex(x => x.id === editing); if (i >= 0) items.splice(i, 1);
+      closeItemForm(); renderAll(); syncState();
+    };
+    $('#item-form').addEventListener('submit', e => {
+      e.preventDefault();
+      const title = $('#it-title').value.trim();
+      if (!title) { $('#it-title').setAttribute('aria-invalid', 'true'); $('#it-error').hidden = false; return; }
+      const data = { day: $('#it-day').value, title, time: $('#it-time').value, note: $('#it-note').value.trim(), place: pickedPlace?.id ?? null };
+      if (editing === 'new') items.push({ id: ++seq, ...data });
+      else Object.assign(items.find(x => x.id === editing), data);
+      activeDay = data.day;
+      closeItemForm(); renderAll(); syncState();
+    });
+
+    /* 사용자 조작으로 프리셋 조건을 벗어나면 Default로 돌린다 */
+    function syncState() { if (prototypeShell.getState() !== 'Default') prototypeShell.setState('Default'); }
+
+    /* ── 여행 목록 ── */
+    const trips = [
+      { title: '후쿠오카 12월', start: '2026. 12. 12', end: '12. 15', days: 4, count: () => items.length },
+      { title: '오사카 벚꽃 여행', start: '2026. 3. 28', end: '4. 1', days: 5, count: () => 0 },
+    ];
+    function renderTrips() {
+      $('#trip-list').innerHTML = trips.map(t => `<a class="card trip-link" href="#trip" data-component="Card">
+        <h3>${esc(t.title)}</h3>
+        <div class="meta"><span>${t.start} – ${t.end}</span><span>·</span><span>${t.days}일</span><span>·</span><span>일정 ${t.count()}개</span></div></a>`).join('');
+    }
+    const openNew = () => { $('#nt-error').hidden = true; $('#nt-title').value = ''; showScrim($('#new-trip-dialog')); $('#nt-title').focus(); };
+    document.addEventListener('click', e => { if (e.target.id === 'open-new-trip' || e.target.hasAttribute('data-open-new-trip')) openNew(); });
+    $('#nt-cancel').onclick = () => hideScrim($('#new-trip-dialog'));
+    $('#new-trip-form').addEventListener('submit', e => {
+      e.preventDefault();
+      const title = $('#nt-title').value.trim(), s = $('#nt-start').value, en = $('#nt-end').value, err = $('#nt-error');
+      if (!title) { err.textContent = '제목을 입력해 주세요.'; err.hidden = false; return; }
+      if (!s || !en) { err.textContent = '시작일과 종료일을 모두 정해 주세요.'; err.hidden = false; return; }
+      if (en < s) { err.textContent = '종료일은 시작일보다 빠를 수 없습니다.'; err.hidden = false; return; }
+      const fmt = d => { const [y, m, dd] = d.split('-').map(Number); return { y, m, dd }; };
+      const a = fmt(s), b = fmt(en);
+      trips.unshift({ title, start: `${a.y}. ${a.m}. ${a.dd}`, end: `${b.m}. ${b.dd}`, days: Math.round((new Date(en) - new Date(s)) / 864e5) + 1, count: () => 0 });
+      hideScrim($('#new-trip-dialog')); renderTrips();
+      if (prototypeShell.getState() !== 'Default') prototypeShell.setState('Default');
+    });
+
+    /* ── 프리셋: 화면 상태를 맞춘다 ── */
+    const origSetState = prototypeShell.setState;
+    prototypeShell.setState = name => {
+      const screen = prototypeShell.getScreen();
+      if (screen === 'trip') {
+        if (name === '핀 1개') { activeDay = '2026-12-15'; renderAll(); }
+        else if (name === '핀 없음') { activeDay = '2026-12-14'; renderAll(); }
+      }
+      origSetState(name);
+    };
+    $('#sh-state').onchange = () => prototypeShell.setState($('#sh-state').value);
+
+    /* ── 순서 변경: 버튼으로 모드를 켜고, 손잡이를 끌어서 옮긴다 ── */
+    $('#reorder-toggle').onclick = () => { reordering = !reordering; renderItems(); };
+    function syncOrderFromDom() {
+      const ids = [...document.querySelectorAll('#items .item')].map(li => Number(li.dataset.id));
+      const slots = items.map((it, idx) => (it.day === activeDay ? idx : -1)).filter(i => i >= 0);
+      const byId = new Map(items.map(it => [it.id, it]));
+      ids.forEach((id, k) => { items[slots[k]] = byId.get(id); });
+      renderMap();
+      let n = 0;
+      document.querySelectorAll('#items .item').forEach(li => {
+        const it = byId.get(Number(li.dataset.id)); const b = li.querySelector('.badge');
+        if (it.place) { b.className = 'badge'; b.textContent = ++n; }
+      });
+    }
+    $('#items').addEventListener('pointerdown', e => {
+      const h = e.target.closest('[data-handle]'); if (!h || !reordering) return;
+      e.preventDefault();
+      const li = h.closest('.item'); li.classList.add('dragging');
+      const list = $('#items');
+      const move = ev => {
+        const sibs = [...list.querySelectorAll('.item')].filter(x => x !== li);
+        const next = sibs.find(x => { const r = x.getBoundingClientRect(); return ev.clientY < r.top + r.height / 2; });
+        if (next ? li.nextElementSibling !== next : list.lastElementChild !== li) {
+          list.insertBefore(li, next ?? null); syncOrderFromDom();
+        }
+      };
+      const up = () => { li.classList.remove('dragging'); document.removeEventListener('pointermove', move); document.removeEventListener('pointerup', up); document.removeEventListener('pointercancel', up); };
+      document.addEventListener('pointermove', move); document.addEventListener('pointerup', up); document.addEventListener('pointercancel', up);
+    });
+
+    renderAll(); renderTrips();
+  })();
+</script>
