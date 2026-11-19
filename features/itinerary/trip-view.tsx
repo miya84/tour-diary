@@ -10,9 +10,10 @@ import { itemLock, orderLock } from "@/features/realtime/locks";
 import { useLock, useLockHolder, useLockedBy } from "@/features/realtime/trip-realtime";
 import { dayLabel } from "@/features/trips/dates";
 
-import { reorderItems } from "./actions";
+import { moveItemToDay, reorderItems } from "./actions";
 import { DayRouteMap } from "./day-route-map";
 import { ItemSheet } from "./item-sheet";
+import { MoveDaySheet } from "./move-day-sheet";
 import { moveId, pinNumbers, routePoints } from "./route";
 import type { ItineraryItem } from "./types";
 
@@ -24,12 +25,18 @@ export function TripView({ tripId, days, items }: { tripId: string; days: string
   // 순서 변경 중에는 서버 응답을 기다리지 않고 화면 순서를 먼저 바꾼다.
   const [localOrder, setLocalOrder] = useState<string[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [moveOpen, setMoveOpen] = useState(false);
+  // 항목을 끄는 동안 포인터가 올라 있는 날짜 탭
+  const [dropDay, setDropDay] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
   // 수정 화면과 순서 변경은 열려 있는 동안 다른 멤버가 같은 것을 못 고치게 잠근다.
   useLock(sheet.item ? itemLock(sheet.item.id) : null, sheet.open);
   useLock(orderLock(activeDay), reordering);
   const orderHolder = useLockedBy(orderLock(activeDay));
+  const holder = useLockHolder();
+  // 다른 멤버가 순서를 변경 중인 날짜로는 옮길 수 없다.
+  const dayLocker = (d: string) => holder(orderLock(d));
 
   const serverDayItems = useMemo(() => items.filter((i) => i.day === activeDay), [items, activeDay]);
   const dayItems = useMemo(() => {
@@ -63,6 +70,20 @@ export function TripView({ tripId, days, items }: { tripId: string; days: string
     });
   };
 
+  const moveItem = (id: string, day: string) => {
+    const locker = dayLocker(day) ?? holder(itemLock(id));
+    if (locker) {
+      setError(`${locker}님이 작업 중이라 지금은 옮길 수 없습니다.`);
+      return;
+    }
+    startTransition(async () => {
+      const res = await moveItemToDay(tripId, id, day);
+      setError(res.error ?? null);
+      setLocalOrder(null);
+      router.refresh();
+    });
+  };
+
   return (
     <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? ""} language="ko">
       <div role="tablist" className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5">
@@ -74,9 +95,11 @@ export function TripView({ tripId, days, items }: { tripId: string; days: string
               key={d}
               role="tab"
               aria-selected={selected}
+              data-day-tab={d}
               onClick={() => selectDay(d)}
               className={
                 "flex min-w-16 flex-none flex-col items-center rounded-2xl border px-2.5 py-1.5 text-xs leading-snug " +
+                (dropDay === d ? "border-primary bg-primary/15 ring-2 ring-primary " : "") +
                 (selected ? "border-primary bg-primary text-primary-foreground" : "border-border")
               }
             >
@@ -97,6 +120,11 @@ export function TripView({ tripId, days, items }: { tripId: string; days: string
               {reordering ? "완료" : "순서 변경"}
             </Button>
           )}
+          {!reordering && dayItems.length > 0 && (
+            <Button size="sm" variant="outline" onClick={() => setMoveOpen(true)}>
+              하루 옮기기
+            </Button>
+          )}
           {!reordering && (
             <Button size="sm" onClick={() => setSheet({ open: true, item: null })}>
               ＋ 일정 추가
@@ -105,17 +133,44 @@ export function TripView({ tripId, days, items }: { tripId: string; days: string
         </div>
       </div>
       {orderHolder && !reordering && <p className="-mt-2 text-sm text-muted-foreground">{orderHolder}님이 순서 변경 중입니다.</p>}
-      {reordering && <p className="-mt-2 text-sm text-muted-foreground">오른쪽 손잡이를 끌어서 순서를 바꾸세요. 지도 번호도 함께 바뀝니다.</p>}
+      {reordering && (
+        <p className="-mt-2 text-sm text-muted-foreground">
+          오른쪽 손잡이를 끌어서 순서를 바꾸세요. 위쪽 날짜 탭에 놓으면 그날 맨 끝으로 옮겨집니다. 지도 번호도 함께 바뀝니다.
+        </p>
+      )}
       {error && <p className="text-sm text-destructive">{error}</p>}
 
       {dayItems.length ? (
-        <ItemList items={dayItems} numbers={numbers} reordering={reordering} onEdit={(item) => setSheet({ open: true, item })} onReorder={commitOrder} />
+        <ItemList
+          items={dayItems}
+          numbers={numbers}
+          reordering={reordering}
+          currentDay={activeDay}
+          onHoverDay={(d) => setDropDay(d && !dayLocker(d) ? d : null)}
+          onEdit={(item) => setSheet({ open: true, item })}
+          onReorder={commitOrder}
+          onMoveToDay={moveItem}
+        />
       ) : (
         <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed px-4 py-7 text-center text-sm text-muted-foreground">
           <b className="text-[15px] font-semibold text-foreground">이 날은 아직 일정이 없습니다</b>
           <span>일정을 추가하면 장소가 있는 항목이 지도에 나타납니다.</span>
         </div>
       )}
+
+      <MoveDaySheet
+        tripId={tripId}
+        days={days}
+        items={items}
+        fromDay={activeDay}
+        lockedBy={dayLocker}
+        open={moveOpen}
+        onOpenChange={setMoveOpen}
+        onMoved={(day) => {
+          selectDay(day);
+          router.refresh();
+        }}
+      />
 
       <ItemSheet
         tripId={tripId}
@@ -137,14 +192,20 @@ function ItemList({
   items,
   numbers,
   reordering,
+  currentDay,
+  onHoverDay,
   onEdit,
   onReorder,
+  onMoveToDay,
 }: {
   items: ItineraryItem[];
   numbers: Map<string, number>;
   reordering: boolean;
+  currentDay: string;
+  onHoverDay: (day: string | null) => void;
   onEdit: (item: ItineraryItem) => void;
   onReorder: (ids: string[]) => void;
+  onMoveToDay: (id: string, day: string) => void;
 }) {
   const holder = useLockHolder();
   const listRef = useRef<HTMLUListElement>(null);
@@ -163,7 +224,16 @@ function ItemList({
     setDraggingId(id);
     setDragOrder(current);
 
+    // 포인터가 다른 날짜 탭 위에 있으면 그 날짜가 놓을 곳이다(순서 변경은 하지 않는다).
+    let hoverDay: string | null = null;
     const move = (ev: PointerEvent) => {
+      const tab = document.elementFromPoint(ev.clientX, ev.clientY)?.closest<HTMLElement>("[data-day-tab]");
+      const day = tab?.dataset.dayTab && tab.dataset.dayTab !== currentDay ? tab.dataset.dayTab : null;
+      if (day !== hoverDay) {
+        hoverDay = day;
+        onHoverDay(day);
+      }
+      if (day) return;
       const rows = [...(listRef.current?.querySelectorAll<HTMLElement>("[data-item-id]") ?? [])].filter((r) => r.dataset.itemId !== id);
       const before = rows.find((r) => {
         const rect = r.getBoundingClientRect();
@@ -181,6 +251,11 @@ function ItemList({
       document.removeEventListener("pointercancel", up);
       setDraggingId(null);
       setDragOrder(null);
+      onHoverDay(null);
+      if (hoverDay) {
+        onMoveToDay(id, hoverDay); // 잠긴 날짜면 부모가 안내 문구를 보여 준다
+        return;
+      }
       if (current.join() !== items.map((i) => i.id).join()) onReorder(current);
     };
     document.addEventListener("pointermove", move);
