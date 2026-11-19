@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { dayLabel, isValidRange, tripDays, tripPeriodLabel } from "./dates";
+import { dayLabel, isValidRange, tripDays, tripInputError, tripPeriodLabel } from "./dates";
 
 describe("tripDays", () => {
   it("시작일부터 종료일까지 모든 날짜를 순서대로 돌려준다 (AC2)", () => {
@@ -42,5 +42,20 @@ describe("labels", () => {
   it("여행 기간을 박·일과 함께 보여 준다", () => {
     expect(tripPeriodLabel("2026-12-12", "2026-12-15")).toBe("2026. 12. 12 – 12. 15 · 3박 4일");
     expect(tripPeriodLabel("2026-12-12", "2026-12-12")).toBe("2026. 12. 12 · 당일");
+  });
+});
+
+describe("tripInputError", () => {
+  it("제목이 비어 있으면 이유를 돌려준다 (AC2)", () => {
+    expect(tripInputError({ title: "  ", start: "2026-12-12", end: "2026-12-15" })).toBe("제목을 입력해 주세요.");
+  });
+
+  it("날짜가 비어 있거나 종료일이 시작일보다 빠르면 이유를 돌려준다 (AC2)", () => {
+    expect(tripInputError({ title: "후쿠오카", start: "", end: "2026-12-15" })).toBe("시작일과 종료일을 모두 정해 주세요.");
+    expect(tripInputError({ title: "후쿠오카", start: "2026-12-15", end: "2026-12-12" })).toBe("종료일은 시작일보다 빠를 수 없습니다.");
+  });
+
+  it("올바르면 null이다", () => {
+    expect(tripInputError({ title: "후쿠오카", start: "2026-12-12", end: "2026-12-15" })).toBeNull();
   });
 });

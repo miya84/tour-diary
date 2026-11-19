@@ -15,6 +15,14 @@ export function isValidRange(start: string, end: string) {
   return ISO_DATE.test(start) && ISO_DATE.test(end) && start <= end;
 }
 
+// 여행을 만들 때와 고칠 때 같은 검증을 쓴다.
+export function tripInputError({ title, start, end }: { title: string; start: string; end: string }): string | null {
+  if (!title.trim()) return "제목을 입력해 주세요.";
+  if (!start || !end) return "시작일과 종료일을 모두 정해 주세요.";
+  if (!isValidRange(start, end)) return "종료일은 시작일보다 빠를 수 없습니다.";
+  return null;
+}
+
 export function tripDays(start: string, end: string) {
   const days: string[] = [];
   for (let d = toUtc(start); toIso(d) <= end; d.setUTCDate(d.getUTCDate() + 1)) {

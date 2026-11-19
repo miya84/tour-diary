@@ -13,6 +13,7 @@ import { MembersSheet } from "@/features/members/members-sheet";
 import { listTripMembers } from "@/features/members/queries";
 import { TripRealtime } from "@/features/realtime/trip-realtime";
 import { tripDays, tripPeriodLabel } from "@/features/trips/dates";
+import { EditTripSheet } from "@/features/trips/edit-trip-sheet";
 import { getTrip } from "@/features/trips/queries";
 import { TripTabs } from "@/features/trips/trip-tabs";
 import { getCurrentUser } from "@/lib/supabase/server";
@@ -47,7 +48,10 @@ export default async function TripPage({ params }: PageProps<"/trips/[tripId]">)
         <h1 className="mt-0.5 text-2xl font-semibold tracking-tight">{trip.title}</h1>
         <div className="mt-0.5 flex items-center justify-between gap-2">
           <p className="text-sm text-muted-foreground">{tripPeriodLabel(trip.startDate, trip.endDate)}</p>
-          <MembersSheet tripId={tripId} members={members} currentUserId={user.id} isOwner={trip.ownerId === user.id} />
+          <div className="flex items-center gap-2">
+            {trip.ownerId === user.id && <EditTripSheet tripId={tripId} trip={{ title: trip.title, startDate: trip.startDate, endDate: trip.endDate }} />}
+            <MembersSheet tripId={tripId} members={members} currentUserId={user.id} isOwner={trip.ownerId === user.id} />
+          </div>
         </div>
       </div>
       <TripTabs
