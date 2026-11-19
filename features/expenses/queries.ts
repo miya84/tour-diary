@@ -3,6 +3,7 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 
 import type { Currency } from "./expenses";
+import { transferKey } from "./settlement";
 import type { Expense } from "./types";
 
 // 멤버만 읽을 수 있다(RLS).
@@ -25,6 +26,14 @@ export async function listExpenses(tripId: string): Promise<Expense[]> {
     note: e.note ?? "",
     shareUserIds: (e.expense_shares as { user_id: string }[]).map((s) => s.user_id),
   }));
+}
+
+// 완료로 표시한 송금의 키(보낸 사람·받는 사람·금액).
+export async function listPaidTransferKeys(tripId: string): Promise<string[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("settlement_payments").select("from_user, to_user, amount").eq("trip_id", tripId);
+  if (error) throw error;
+  return data.map((p) => transferKey({ from: p.from_user, to: p.to_user, amount: Number(p.amount) }));
 }
 
 // 100엔당 원. 아직 안 넣었으면 null.

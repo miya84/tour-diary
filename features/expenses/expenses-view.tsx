@@ -10,6 +10,8 @@ import { dayLabel } from "@/features/trips/dates";
 import { saveExchangeRate } from "./actions";
 import { ExpenseFormSheet } from "./expense-form-sheet";
 import { defaultExpenseDay, formatMoney, summarize, type Totals } from "./expenses";
+import { settle } from "./settlement";
+import { SettlementSheet } from "./settlement-sheet";
 import type { Expense, ExpensePerson } from "./types";
 
 export function ExpensesView({
@@ -19,6 +21,7 @@ export function ExpensesView({
   currentUserId,
   expenses,
   krwPer100Jpy,
+  paidTransferKeys,
 }: {
   tripId: string;
   days: string[];
@@ -26,6 +29,7 @@ export function ExpensesView({
   currentUserId: string;
   expenses: Expense[];
   krwPer100Jpy: number | null;
+  paidTransferKeys: string[];
 }) {
   const [form, setForm] = useState<{ open: boolean; expense: Expense | null; day: string }>({ open: false, expense: null, day: days[0] });
   const { days: groups, total, totalInKrw } = summarize(expenses, krwPer100Jpy);
@@ -48,6 +52,9 @@ export function ExpensesView({
         <TotalsLine totals={total} className="text-lg font-semibold" />
         {totalInKrw !== null && <div className="text-sm">원으로 합치면 약 {formatMoney(totalInKrw, "KRW")}</div>}
         <RateEditor tripId={tripId} rate={krwPer100Jpy} />
+        <div className="flex justify-end border-t pt-2">
+          <SettlementSheet tripId={tripId} settlement={settle(expenses, krwPer100Jpy)} paidKeys={paidTransferKeys} nickname={nickname} />
+        </div>
       </section>
 
       {groups.length ? (

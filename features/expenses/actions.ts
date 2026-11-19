@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 
 import { CURRENCIES, parseAmount, parseRate, validateExpense } from "./expenses";
+import type { Transfer } from "./settlement";
 import type { ExpenseInput } from "./types";
 
 type Result = { error?: string };
@@ -42,6 +43,19 @@ export async function deleteExpense(tripId: string, expenseId: string): Promise<
   const supabase = await authed();
   const { error, count } = await supabase.from("expenses").delete({ count: "exact" }).eq("id", expenseId).eq("trip_id", tripId);
   if (error || count === 0) return { error: "경비를 지우지 못했습니다." };
+  revalidatePath(`/trips/${tripId}`);
+  return {};
+}
+
+// 송금 완료 표시와 해제.
+export async function setTransferPaid(tripId: string, transfer: Transfer, paid: boolean): Promise<Result> {
+  if (!(transfer.amount > 0) || !Number.isInteger(transfer.amount) || transfer.from === transfer.to) return { error: "송금 정보가 올바르지 않습니다." };
+  const supabase = await authed();
+  const row = { trip_id: tripId, from_user: transfer.from, to_user: transfer.to, amount: transfer.amount };
+  const { error } = paid
+    ? await supabase.from("settlement_payments").upsert(row, { ignoreDuplicates: true })
+    : await supabase.from("settlement_payments").delete().match(row);
+  if (error) return { error: "완료 표시를 저장하지 못했습니다." };
   revalidatePath(`/trips/${tripId}`);
   return {};
 }
