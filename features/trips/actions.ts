@@ -29,6 +29,26 @@ export async function createTrip(_prev: CreateTripState, formData: FormData): Pr
 
 type Result = { error?: string };
 
+const COPY_ERRORS: Record<string, string> = {
+  invalid_title: "제목을 입력해 주세요.",
+  source_not_found: "복사할 여행을 찾지 못했습니다.",
+};
+
+// 다른 사람의 여행(또는 내 여행)의 일정을 새 여행으로 복사한다. 새 여행과 일정은 copy_trip 함수가 한 번에 만든다.
+export async function copyTrip(sourceId: string, input: { title: string; start: string }): Promise<Result> {
+  if (!input.title.trim()) return { error: "제목을 입력해 주세요." };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.start)) return { error: "시작일을 정해 주세요." };
+  const user = await getCurrentUser();
+  if (!user) return { error: "로그인이 필요합니다." };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("copy_trip", { p_source_id: sourceId, p_title: input.title, p_start: input.start });
+  if (error || !data) return { error: COPY_ERRORS[error?.message ?? ""] ?? "여행을 복사하지 못했습니다." };
+
+  revalidatePath("/");
+  redirect(`/trips/${data}`);
+}
+
 const UPDATE_ERRORS: Record<string, string> = {
   not_owner: "여행을 만든 사람만 고칠 수 있습니다.",
   invalid_title: "제목을 입력해 주세요.",

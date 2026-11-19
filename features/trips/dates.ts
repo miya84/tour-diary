@@ -31,6 +31,15 @@ export function tripDays(start: string, end: string) {
   return days;
 }
 
+// 복사한 여행의 종료일: 새 시작일에서 원래 여행과 같은 일수만큼 뒤.
+export function copiedEndDate(sourceStart: string, sourceEnd: string, newStart: string) {
+  if (!ISO_DATE.test(newStart)) return "";
+  const length = Math.round((toUtc(sourceEnd).getTime() - toUtc(sourceStart).getTime()) / 86_400_000);
+  const end = toUtc(newStart);
+  end.setUTCDate(end.getUTCDate() + length);
+  return toIso(end);
+}
+
 export function dayLabel(day: string) {
   const d = toUtc(day);
   const month = d.getUTCMonth() + 1;

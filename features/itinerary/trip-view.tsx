@@ -17,7 +17,8 @@ import { MoveDaySheet } from "./move-day-sheet";
 import { moveId, pinNumbers, routePoints } from "./route";
 import type { ItineraryItem } from "./types";
 
-export function TripView({ tripId, days, items }: { tripId: string; days: string[]; items: ItineraryItem[] }) {
+// readOnly면 열람자 화면이다: 일정을 보기만 하고 추가·수정·순서 변경·이동 버튼은 없다.
+export function TripView({ tripId, days, items, readOnly = false }: { tripId: string; days: string[]; items: ItineraryItem[]; readOnly?: boolean }) {
   const router = useRouter();
   const [activeDay, setActiveDay] = useState(days[0]);
   const [reordering, setReordering] = useState(false);
@@ -115,17 +116,17 @@ export function TripView({ tripId, days, items }: { tripId: string; days: string
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-base font-semibold">{dayLabel(activeDay).full}</h2>
         <div className="flex gap-2">
-          {(dayItems.length > 1 || reordering) && (
+          {!readOnly && (dayItems.length > 1 || reordering) && (
             <Button size="sm" variant={reordering ? "default" : "outline"} disabled={!!orderHolder && !reordering} onClick={() => setReordering((r) => !r)}>
               {reordering ? "완료" : "순서 변경"}
             </Button>
           )}
-          {!reordering && dayItems.length > 0 && (
+          {!readOnly && !reordering && dayItems.length > 0 && (
             <Button size="sm" variant="outline" onClick={() => setMoveOpen(true)}>
               하루 옮기기
             </Button>
           )}
-          {!reordering && (
+          {!readOnly && !reordering && (
             <Button size="sm" onClick={() => setSheet({ open: true, item: null })}>
               ＋ 일정 추가
             </Button>
@@ -145,6 +146,7 @@ export function TripView({ tripId, days, items }: { tripId: string; days: string
           items={dayItems}
           numbers={numbers}
           reordering={reordering}
+          readOnly={readOnly}
           currentDay={activeDay}
           onHoverDay={(d) => setDropDay(d && !dayLocker(d) ? d : null)}
           onEdit={(item) => setSheet({ open: true, item })}
@@ -154,7 +156,7 @@ export function TripView({ tripId, days, items }: { tripId: string; days: string
       ) : (
         <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed px-4 py-7 text-center text-sm text-muted-foreground">
           <b className="text-[15px] font-semibold text-foreground">이 날은 아직 일정이 없습니다</b>
-          <span>일정을 추가하면 장소가 있는 항목이 지도에 나타납니다.</span>
+          {!readOnly && <span>일정을 추가하면 장소가 있는 항목이 지도에 나타납니다.</span>}
         </div>
       )}
 
@@ -192,6 +194,7 @@ function ItemList({
   items,
   numbers,
   reordering,
+  readOnly,
   currentDay,
   onHoverDay,
   onEdit,
@@ -201,6 +204,7 @@ function ItemList({
   items: ItineraryItem[];
   numbers: Map<string, number>;
   reordering: boolean;
+  readOnly: boolean;
   currentDay: string;
   onHoverDay: (day: string | null) => void;
   onEdit: (item: ItineraryItem) => void;
@@ -314,7 +318,7 @@ function ItemList({
               >
                 <GripVerticalIcon className="size-4" />
               </span>
-            ) : (
+            ) : readOnly ? null : (
               <Button size="icon-sm" variant="ghost" aria-label="수정" disabled={!!editor} onClick={() => onEdit(item)}>
                 <PencilIcon />
               </Button>

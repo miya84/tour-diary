@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { dayLabel, isValidRange, tripDays, tripInputError, tripPeriodLabel } from "./dates";
+import { copiedEndDate, dayLabel, isValidRange, tripDays, tripInputError, tripPeriodLabel } from "./dates";
 
 describe("tripDays", () => {
   it("시작일부터 종료일까지 모든 날짜를 순서대로 돌려준다 (AC2)", () => {
@@ -57,5 +57,19 @@ describe("tripInputError", () => {
 
   it("올바르면 null이다", () => {
     expect(tripInputError({ title: "후쿠오카", start: "2026-12-12", end: "2026-12-15" })).toBeNull();
+  });
+});
+
+describe("copiedEndDate", () => {
+  it("원래 여행과 같은 길이의 종료일을 돌려준다 (AC5)", () => {
+    expect(copiedEndDate("2026-12-12", "2026-12-15", "2027-01-30")).toBe("2027-02-02");
+  });
+
+  it("하루짜리 여행은 시작일이 곧 종료일이다", () => {
+    expect(copiedEndDate("2026-12-12", "2026-12-12", "2027-03-01")).toBe("2027-03-01");
+  });
+
+  it("시작일이 비어 있으면 빈 문자열이다", () => {
+    expect(copiedEndDate("2026-12-12", "2026-12-15", "")).toBe("");
   });
 });

@@ -18,6 +18,14 @@ export async function listMyInvitations(): Promise<Invitation[]> {
   }));
 }
 
+// 내가 이 여행의 멤버인가. 아니면 일정만 읽는 열람자다.
+export async function isTripMember(tripId: string, userId: string): Promise<boolean> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("trip_members").select("user_id").eq("trip_id", tripId).eq("user_id", userId).maybeSingle();
+  if (error) throw error;
+  return !!data;
+}
+
 export async function listTripMembers(tripId: string): Promise<Member[]> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("list_trip_members", { p_trip_id: tripId });

@@ -2,11 +2,12 @@ import { ReceivedInvitations } from "@/features/members/received-invitations";
 import { listMyInvitations } from "@/features/members/queries";
 import { NewTripSheet } from "@/features/trips/new-trip-sheet";
 import { TripList } from "@/features/trips/trip-list";
-import { listMyTrips } from "@/features/trips/queries";
+import { listTrips } from "@/features/trips/queries";
 import { getCurrentUser } from "@/lib/supabase/server";
 
 export default async function Home() {
-  const [user, trips, invitations] = await Promise.all([getCurrentUser(), listMyTrips(), listMyInvitations()]);
+  const user = await getCurrentUser();
+  const [trips, invitations] = await Promise.all([listTrips(user?.id ?? ""), listMyInvitations()]);
 
   return (
     <>

@@ -15,7 +15,18 @@ const REFRESH_DELAY_MS = 300;
 
 // 여행 화면 전체를 감싼다. 1) DB 변경을 받으면 서버 데이터를 다시 불러오고,
 // 2) 수정 중 잠금을 같은 여행의 다른 접속자와 공유한다.
-export function TripRealtime({ tripId, userName, children }: { tripId: string; userName: string; children: React.ReactNode }) {
+// presence가 false면(열람자) 잠금 채널에는 들어가지 않고 변경만 받는다.
+export function TripRealtime({
+  tripId,
+  userName,
+  presence = true,
+  children,
+}: {
+  tripId: string;
+  userName: string;
+  presence?: boolean;
+  children: React.ReactNode;
+}) {
   const router = useRouter();
   const [clientId] = useState(() => crypto.randomUUID());
   const [states, setStates] = useState<PresenceState[]>([]);
@@ -41,6 +52,7 @@ export function TripRealtime({ tripId, userName, children }: { tripId: string; u
 
   // 2) 잠금 공유(비공개 채널, 멤버만 들어간다)
   useEffect(() => {
+    if (!presence) return;
     const supabase = createClient();
     let cancelled = false;
     let subscribed = false;
@@ -79,7 +91,7 @@ export function TripRealtime({ tripId, userName, children }: { tripId: string; u
       track.current = null;
       supabase.removeChannel(channel);
     };
-  }, [tripId, clientId, userName]);
+  }, [tripId, clientId, userName, presence]);
 
   // setLock은 접속 상태가 바뀌어도 같은 함수여야 한다(바뀌면 잠금을 풀었다 다시 잡아 시각이 밀린다).
   const setLock = useCallback((key: string, on: boolean) => {
