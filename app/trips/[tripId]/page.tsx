@@ -11,6 +11,7 @@ import { listPolls } from "@/features/polls/queries";
 import { PollsView } from "@/features/polls/polls-view";
 import { MembersSheet } from "@/features/members/members-sheet";
 import { listTripMembers } from "@/features/members/queries";
+import { TripRealtime } from "@/features/realtime/trip-realtime";
 import { tripDays, tripPeriodLabel } from "@/features/trips/dates";
 import { getTrip } from "@/features/trips/queries";
 import { TripTabs } from "@/features/trips/trip-tabs";
@@ -35,8 +36,10 @@ export default async function TripPage({ params }: PageProps<"/trips/[tripId]">)
   // 경비의 낸 사람·나눌 사람은 수락한 멤버만 고를 수 있다.
   const people = members.filter((m) => m.status === "member").map((m) => ({ userId: m.userId, nickname: m.nickname }));
 
+  const myName = members.find((m) => m.userId === user.id)?.nickname ?? "멤버";
+
   return (
-    <>
+    <TripRealtime tripId={tripId} userName={myName}>
       <div>
         <Link href="/" className="text-sm text-muted-foreground">
           ← 내 여행
@@ -64,6 +67,6 @@ export default async function TripPage({ params }: PageProps<"/trips/[tripId]">)
           { id: "polls", label: "투표", content: <PollsView tripId={tripId} days={days} polls={polls} /> },
         ]}
       />
-    </>
+    </TripRealtime>
   );
 }

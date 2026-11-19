@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
+import { itemLock, orderLock } from "@/features/realtime/locks";
+import { useLock, useLockHolder, useLockedBy } from "@/features/realtime/trip-realtime";
 import { dayLabel } from "@/features/trips/dates";
 
 import { reorderItems } from "./actions";
@@ -23,6 +25,11 @@ export function TripView({ tripId, days, items }: { tripId: string; days: string
   const [localOrder, setLocalOrder] = useState<string[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+
+  // 수정 화면과 순서 변경은 열려 있는 동안 다른 멤버가 같은 것을 못 고치게 잠근다.
+  useLock(sheet.item ? itemLock(sheet.item.id) : null, sheet.open);
+  useLock(orderLock(activeDay), reordering);
+  const orderHolder = useLockedBy(orderLock(activeDay));
 
   const serverDayItems = useMemo(() => items.filter((i) => i.day === activeDay), [items, activeDay]);
   const dayItems = useMemo(() => {
@@ -86,7 +93,7 @@ export function TripView({ tripId, days, items }: { tripId: string; days: string
         <h2 className="text-base font-semibold">{dayLabel(activeDay).full}</h2>
         <div className="flex gap-2">
           {(dayItems.length > 1 || reordering) && (
-            <Button size="sm" variant={reordering ? "default" : "outline"} onClick={() => setReordering((r) => !r)}>
+            <Button size="sm" variant={reordering ? "default" : "outline"} disabled={!!orderHolder && !reordering} onClick={() => setReordering((r) => !r)}>
               {reordering ? "완료" : "순서 변경"}
             </Button>
           )}
@@ -97,6 +104,7 @@ export function TripView({ tripId, days, items }: { tripId: string; days: string
           )}
         </div>
       </div>
+      {orderHolder && !reordering && <p className="-mt-2 text-sm text-muted-foreground">{orderHolder}님이 순서 변경 중입니다.</p>}
       {reordering && <p className="-mt-2 text-sm text-muted-foreground">오른쪽 손잡이를 끌어서 순서를 바꾸세요. 지도 번호도 함께 바뀝니다.</p>}
       {error && <p className="text-sm text-destructive">{error}</p>}
 
@@ -138,6 +146,7 @@ function ItemList({
   onEdit: (item: ItineraryItem) => void;
   onReorder: (ids: string[]) => void;
 }) {
+  const holder = useLockHolder();
   const listRef = useRef<HTMLUListElement>(null);
   const [dragOrder, setDragOrder] = useState<string[] | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -184,6 +193,7 @@ function ItemList({
       {shown.map((item) => {
         const n = liveNumbers.get(item.id);
         const sub = [item.startTime, item.note].filter(Boolean).join(" · ");
+        const editor = holder(itemLock(item.id));
         return (
           <li
             key={item.id}
@@ -208,6 +218,7 @@ function ItemList({
                 <span className="mt-1.5 inline-block rounded-full bg-muted px-2 py-px text-[11px] text-muted-foreground">장소 없음 · 지도에 안 나옴</span>
               )}
               {sub && <div className="mt-0.5 text-xs text-muted-foreground">{sub}</div>}
+              {editor && <div className="mt-0.5 text-xs font-medium text-primary">{editor}님이 수정 중</div>}
               {item.place && !reordering && (
                 <a
                   href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.place.name)}&query_place_id=${encodeURIComponent(item.place.placeId)}`}
@@ -229,7 +240,7 @@ function ItemList({
                 <GripVerticalIcon className="size-4" />
               </span>
             ) : (
-              <Button size="icon-sm" variant="ghost" aria-label="수정" onClick={() => onEdit(item)}>
+              <Button size="icon-sm" variant="ghost" aria-label="수정" disabled={!!editor} onClick={() => onEdit(item)}>
                 <PencilIcon />
               </Button>
             )}
