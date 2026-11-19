@@ -10,8 +10,10 @@ import { TripView } from "@/features/itinerary/trip-view";
 import { listPolls } from "@/features/polls/queries";
 import { PollsView } from "@/features/polls/polls-view";
 import { MembersSheet } from "@/features/members/members-sheet";
-import { listTripMembers } from "@/features/members/queries";
+import { isTripMember, listTripMembers } from "@/features/members/queries";
+import { getNicknames } from "@/features/profile/queries";
 import { TripRealtime } from "@/features/realtime/trip-realtime";
+import { CopyTripSheet } from "@/features/trips/copy-trip-sheet";
 import { tripDays, tripPeriodLabel } from "@/features/trips/dates";
 import { EditTripSheet } from "@/features/trips/edit-trip-sheet";
 import { getTrip } from "@/features/trips/queries";
@@ -24,6 +26,29 @@ export default async function TripPage({ params }: PageProps<"/trips/[tripId]">)
   // 멤버가 아니면 RLS 때문에 여행이 보이지 않는다.
   if (!trip || !user) notFound();
 
+  const days = tripDays(trip.startDate, trip.endDate);
+
+  // 멤버가 아니면 열람자다: 일정과 지도만 읽을 수 있고, 다른 탭의 데이터는 RLS 때문에 어차피 보이지 않는다.
+  if (!(await isTripMember(tripId, user.id))) {
+    const [items, nicknames] = await Promise.all([listItems(tripId), getNicknames([trip.ownerId])]);
+    return (
+      <TripRealtime tripId={tripId} userName="" presence={false}>
+        <div>
+          <Link href="/" className="text-sm text-muted-foreground">
+            ← 내 여행
+          </Link>
+          <h1 className="mt-0.5 text-2xl font-semibold tracking-tight">{trip.title}</h1>
+          <div className="mt-0.5 flex items-center justify-between gap-2">
+            <p className="text-sm text-muted-foreground">{tripPeriodLabel(trip.startDate, trip.endDate)}</p>
+            <CopyTripSheet trip={{ id: trip.id, title: trip.title, startDate: trip.startDate, endDate: trip.endDate }} />
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">{nicknames[trip.ownerId] ?? "멤버"}님이 만든 여행 · 읽기 전용</p>
+        </div>
+        <TripView tripId={tripId} days={days} items={items} readOnly />
+      </TripRealtime>
+    );
+  }
+
   const [items, members, bookings, expenses, rate, polls, paidTransferKeys] = await Promise.all([
     listItems(tripId),
     listTripMembers(tripId),
@@ -33,7 +58,6 @@ export default async function TripPage({ params }: PageProps<"/trips/[tripId]">)
     listPolls(tripId),
     listPaidTransferKeys(tripId),
   ]);
-  const days = tripDays(trip.startDate, trip.endDate);
   // 경비의 낸 사람·나눌 사람은 수락한 멤버만 고를 수 있다.
   const people = members.filter((m) => m.status === "member").map((m) => ({ userId: m.userId, nickname: m.nickname }));
 
@@ -49,6 +73,7 @@ export default async function TripPage({ params }: PageProps<"/trips/[tripId]">)
         <div className="mt-0.5 flex items-center justify-between gap-2">
           <p className="text-sm text-muted-foreground">{tripPeriodLabel(trip.startDate, trip.endDate)}</p>
           <div className="flex items-center gap-2">
+            <CopyTripSheet trip={{ id: trip.id, title: trip.title, startDate: trip.startDate, endDate: trip.endDate }} />
             {trip.ownerId === user.id && <EditTripSheet tripId={tripId} trip={{ title: trip.title, startDate: trip.startDate, endDate: trip.endDate }} />}
             <MembersSheet tripId={tripId} members={members} currentUserId={user.id} isOwner={trip.ownerId === user.id} />
           </div>
