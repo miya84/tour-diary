@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -21,7 +20,6 @@ export function SettlementSheet({
   paidKeys: string[];
   nickname: (userId: string) => string;
 }) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -31,7 +29,6 @@ export function SettlementSheet({
     startTransition(async () => {
       const res = await setTransferPaid(tripId, t, !paid.has(transferKey(t)));
       setError(res.error ?? null);
-      router.refresh();
     });
 
   return (

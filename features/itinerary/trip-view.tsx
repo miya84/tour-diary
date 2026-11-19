@@ -2,7 +2,6 @@
 
 import { APIProvider } from "@vis.gl/react-google-maps";
 import { GripVerticalIcon, PencilIcon } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -19,7 +18,6 @@ import type { ItineraryItem } from "./types";
 
 // readOnly면 열람자 화면이다: 일정을 보기만 하고 추가·수정·순서 변경·이동 버튼은 없다.
 export function TripView({ tripId, days, items, readOnly = false }: { tripId: string; days: string[]; items: ItineraryItem[]; readOnly?: boolean }) {
-  const router = useRouter();
   const [activeDay, setActiveDay] = useState(days[0]);
   const [reordering, setReordering] = useState(false);
   const [sheet, setSheet] = useState<{ open: boolean; item: ItineraryItem | null }>({ open: false, item: null });
@@ -67,7 +65,6 @@ export function TripView({ tripId, days, items, readOnly = false }: { tripId: st
     startTransition(async () => {
       const res = await reorderItems(tripId, activeDay, ids);
       setError(res.error ?? null);
-      router.refresh();
     });
   };
 
@@ -81,7 +78,6 @@ export function TripView({ tripId, days, items, readOnly = false }: { tripId: st
       const res = await moveItemToDay(tripId, id, day);
       setError(res.error ?? null);
       setLocalOrder(null);
-      router.refresh();
     });
   };
 
@@ -172,7 +168,6 @@ export function TripView({ tripId, days, items, readOnly = false }: { tripId: st
         onOpenChange={setMoveOpen}
         onMoved={(day) => {
           selectDay(day);
-          router.refresh();
         }}
       />
 
@@ -185,7 +180,6 @@ export function TripView({ tripId, days, items, readOnly = false }: { tripId: st
         onOpenChange={(open) => setSheet((s) => ({ ...s, open }))}
         onSaved={(day) => {
           setActiveDay(day);
-          router.refresh();
         }}
       />
     </APIProvider>

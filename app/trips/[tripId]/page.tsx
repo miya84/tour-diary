@@ -1,3 +1,4 @@
+import Link from "@/components/app-link";
 import { CalendarDaysIcon, TicketIcon, VoteIcon, WalletIcon } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -20,6 +21,7 @@ import { EditTripSheet } from "@/features/trips/edit-trip-sheet";
 import { getTrip } from "@/features/trips/queries";
 import { TripTabs } from "@/features/trips/trip-tabs";
 import { getCurrentUser } from "@/lib/supabase/server";
+import { RenderStamp } from "@/lib/render-stamp";
 
 export default async function TripPage({ params }: PageProps<"/trips/[tripId]">) {
   const { tripId } = await params;
@@ -34,6 +36,7 @@ export default async function TripPage({ params }: PageProps<"/trips/[tripId]">)
     const [items, nicknames] = await Promise.all([listItems(tripId), getNicknames([trip.ownerId])]);
     return (
       <TripRealtime tripId={tripId} userName="" presence={false}>
+        <RenderStamp stamp={crypto.randomUUID()} />
         <div>
           <Link href="/" className="text-sm text-muted-foreground">
             ← 내 여행
@@ -66,6 +69,7 @@ export default async function TripPage({ params }: PageProps<"/trips/[tripId]">)
 
   return (
     <TripRealtime tripId={tripId} userName={myName}>
+      <RenderStamp stamp={crypto.randomUUID()} />
       <div>
         <Link href="/" className="text-sm text-muted-foreground">
           ← 내 여행

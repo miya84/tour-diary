@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
-import Link from "next/link";
+import Link from "@/components/app-link";
 
 import "./globals.css";
 import { LogoutButton } from "@/features/auth/logout-button";

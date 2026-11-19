@@ -4,6 +4,7 @@ import { NewTripSheet } from "@/features/trips/new-trip-sheet";
 import { TripList } from "@/features/trips/trip-list";
 import { listTrips } from "@/features/trips/queries";
 import { getCurrentUser } from "@/lib/supabase/server";
+import { RenderStamp } from "@/lib/render-stamp";
 
 export default async function Home() {
   const user = await getCurrentUser();
@@ -11,6 +12,7 @@ export default async function Home() {
 
   return (
     <>
+      <RenderStamp stamp={crypto.randomUUID()} />
       <div className="flex items-center justify-between">
         <h1 className="text-[22px] font-bold tracking-tight">내 여행</h1>
         <NewTripSheet label="새 여행" />

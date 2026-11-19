@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { dayLabel } from "@/features/trips/dates";
+import { useCloseWhenDone } from "@/lib/use-close-when-done";
 
 import { swapDays } from "./actions";
 import { moveDayCounts } from "./days";
@@ -78,6 +79,7 @@ function MoveForm({
   const [target, setTarget] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const { finish, waiting } = useCloseWhenDone(pending, onClose);
 
   const counts = target ? moveDayCounts(items, fromDay, target) : null;
   // "12월 23일"처럼 받침 있는 말로 끝나게 써서 조사(은·로·의)가 자연스럽게 붙는다.
@@ -91,7 +93,7 @@ function MoveForm({
       const res = await swapDays(tripId, fromDay, target);
       if (res.error) return setError(res.error);
       onMoved(target);
-      onClose();
+      finish();
     });
   };
 
@@ -135,11 +137,11 @@ function MoveForm({
       {blocker && !target && <p className="text-sm text-muted-foreground">{blocker}님이 순서 변경 중이라 지금은 옮길 수 없습니다.</p>}
       {error && <p className="text-sm text-destructive">{error}</p>}
       <div className="flex justify-end gap-2">
-        <Button variant="outline" disabled={pending} onClick={onClose}>
+        <Button variant="outline" disabled={waiting} onClick={onClose}>
           취소
         </Button>
-        <Button disabled={!target || pending} onClick={submit}>
-          {pending ? "옮기는 중…" : "옮기기"}
+        <Button disabled={!target || waiting} onClick={submit}>
+          {waiting ? "옮기는 중…" : "옮기기"}
         </Button>
       </div>
     </div>

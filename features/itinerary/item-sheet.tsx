@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { dayLabel } from "@/features/trips/dates";
+import { useCloseWhenDone } from "@/lib/use-close-when-done";
 
 import { addItem, deleteItem, updateItem } from "./actions";
 import { PlaceSearch } from "./place-search";
@@ -65,6 +66,7 @@ function ItemForm({
   const [note, setNote] = useState(item?.note ?? "");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const { finish, waiting } = useCloseWhenDone(pending, onClose);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,7 +79,7 @@ function ItemForm({
       const res = item ? await updateItem(tripId, item.id, input, item.day) : await addItem(tripId, input);
       if (res.error) return setError(res.error);
       onSaved(day);
-      onClose();
+      finish();
     });
   };
 
@@ -85,7 +87,7 @@ function ItemForm({
     startTransition(async () => {
       const res = await deleteItem(tripId, item!.id);
       if (res.error) return setError(res.error);
-      onClose();
+      finish();
     });
 
   return (
@@ -132,7 +134,7 @@ function ItemForm({
       {error && <p className="text-sm text-destructive">{error}</p>}
       <div className="flex items-center gap-2">
         {item && (
-          <Button type="button" variant="destructive" disabled={pending} onClick={remove}>
+          <Button type="button" variant="destructive" disabled={waiting} onClick={remove}>
             삭제
           </Button>
         )}
@@ -140,8 +142,8 @@ function ItemForm({
         <Button type="button" variant="outline" onClick={onClose}>
           취소
         </Button>
-        <Button type="submit" disabled={pending}>
-          {pending ? "저장하는 중…" : "저장"}
+        <Button type="submit" disabled={waiting}>
+          {waiting ? "저장하는 중…" : "저장"}
         </Button>
       </div>
     </form>

@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -22,7 +21,6 @@ export function MembersSheet({
   currentUserId: string;
   isOwner: boolean;
 }) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +33,6 @@ export function MembersSheet({
       const { error } = await action();
       setError(error ?? null);
       if (!error) onOk?.();
-      router.refresh();
     });
 
   const invite = (e: React.FormEvent) => {
@@ -102,7 +99,7 @@ export function MembersSheet({
                   onChange={(e) => setEmail(e.target.value)}
                 />
                 <Button type="submit" disabled={pending}>
-                  초대
+                  {pending ? "초대하는 중…" : "초대"}
                 </Button>
               </div>
               {error && <p className="text-sm text-destructive">{error}</p>}
