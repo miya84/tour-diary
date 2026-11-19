@@ -1,12 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { BookingsView } from "@/features/bookings/bookings-view";
+import { listBookings } from "@/features/bookings/queries";
+import { ExpensesView } from "@/features/expenses/expenses-view";
+import { getExchangeRate, listExpenses } from "@/features/expenses/queries";
 import { listItems } from "@/features/itinerary/queries";
 import { TripView } from "@/features/itinerary/trip-view";
 import { MembersSheet } from "@/features/members/members-sheet";
 import { listTripMembers } from "@/features/members/queries";
 import { tripDays, tripPeriodLabel } from "@/features/trips/dates";
 import { getTrip } from "@/features/trips/queries";
+import { TripTabs } from "@/features/trips/trip-tabs";
 import { getCurrentUser } from "@/lib/supabase/server";
 
 export default async function TripPage({ params }: PageProps<"/trips/[tripId]">) {
@@ -15,7 +20,16 @@ export default async function TripPage({ params }: PageProps<"/trips/[tripId]">)
   // 멤버가 아니면 RLS 때문에 여행이 보이지 않는다.
   if (!trip || !user) notFound();
 
-  const [items, members] = await Promise.all([listItems(tripId), listTripMembers(tripId)]);
+  const [items, members, bookings, expenses, rate] = await Promise.all([
+    listItems(tripId),
+    listTripMembers(tripId),
+    listBookings(tripId),
+    listExpenses(tripId),
+    getExchangeRate(tripId),
+  ]);
+  const days = tripDays(trip.startDate, trip.endDate);
+  // 경비의 낸 사람·나눌 사람은 수락한 멤버만 고를 수 있다.
+  const people = members.filter((m) => m.status === "member").map((m) => ({ userId: m.userId, nickname: m.nickname }));
 
   return (
     <>
@@ -29,7 +43,19 @@ export default async function TripPage({ params }: PageProps<"/trips/[tripId]">)
           <MembersSheet tripId={tripId} members={members} currentUserId={user.id} isOwner={trip.ownerId === user.id} />
         </div>
       </div>
-      <TripView tripId={tripId} days={tripDays(trip.startDate, trip.endDate)} items={items} />
+      <TripTabs
+        tabs={[
+          { id: "itinerary", label: "일정", content: <TripView tripId={tripId} days={days} items={items} /> },
+          { id: "bookings", label: "예약함", content: <BookingsView tripId={tripId} bookings={bookings} /> },
+          {
+            id: "expenses",
+            label: "경비",
+            content: (
+              <ExpensesView tripId={tripId} days={days} people={people} currentUserId={user.id} expenses={expenses} krwPer100Jpy={rate} />
+            ),
+          },
+        ]}
+      />
     </>
   );
 }
