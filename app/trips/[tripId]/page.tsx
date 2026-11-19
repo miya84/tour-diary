@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { BookingsView } from "@/features/bookings/bookings-view";
 import { listBookings } from "@/features/bookings/queries";
 import { ExpensesView } from "@/features/expenses/expenses-view";
-import { getExchangeRate, listExpenses } from "@/features/expenses/queries";
+import { getExchangeRate, listExpenses, listPaidTransferKeys } from "@/features/expenses/queries";
 import { listItems } from "@/features/itinerary/queries";
 import { TripView } from "@/features/itinerary/trip-view";
 import { MembersSheet } from "@/features/members/members-sheet";
@@ -20,12 +20,13 @@ export default async function TripPage({ params }: PageProps<"/trips/[tripId]">)
   // 멤버가 아니면 RLS 때문에 여행이 보이지 않는다.
   if (!trip || !user) notFound();
 
-  const [items, members, bookings, expenses, rate] = await Promise.all([
+  const [items, members, bookings, expenses, rate, paidTransferKeys] = await Promise.all([
     listItems(tripId),
     listTripMembers(tripId),
     listBookings(tripId),
     listExpenses(tripId),
     getExchangeRate(tripId),
+    listPaidTransferKeys(tripId),
   ]);
   const days = tripDays(trip.startDate, trip.endDate);
   // 경비의 낸 사람·나눌 사람은 수락한 멤버만 고를 수 있다.
@@ -51,7 +52,10 @@ export default async function TripPage({ params }: PageProps<"/trips/[tripId]">)
             id: "expenses",
             label: "경비",
             content: (
-              <ExpensesView tripId={tripId} days={days} people={people} currentUserId={user.id} expenses={expenses} krwPer100Jpy={rate} />
+              <ExpensesView tripId={tripId} days={days} people={people} currentUserId={user.id} expenses={expenses}
+                krwPer100Jpy={rate}
+                paidTransferKeys={paidTransferKeys}
+              />
             ),
           },
         ]}
