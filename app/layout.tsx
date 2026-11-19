@@ -22,7 +22,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "여행 수첩",
+  title: "J의 여행수첩",
   description: "함께 만드는 여행 일정과 하루 동선 지도",
 };
 
@@ -41,7 +41,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <div className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-5 px-4 py-4">
           <header className="flex items-center justify-between gap-2">
             <Link href="/" className="text-[15px] font-semibold tracking-tight">
-              여행 수첩
+              J의 여행수첩
             </Link>
             <nav className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
               {user ? (
