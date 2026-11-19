@@ -44,3 +44,14 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - 자동 코드 리뷰는 최대 1회, 가장 낮은 강도(`code-review low`)로만 돌린다. 리뷰어를 못 부르면 그 사실만 적고 완료로 본다.
 - 지적 중 스펙의 수용 기준을 깨거나 주 경로가 실제로 깨지는 것만 고친다. 나머지는 `docs/follow-ups/`에 한 줄로 남긴다. 재리뷰는 하지 않는다.
 - 스펙이 요구하지 않은 보안 하드닝·엣지케이스·성능 방어는 범위 밖이다.
+
+<!-- BEGIN:stack-context (managed by add-stack-context) -->
+
+# 스택 공식 맥락
+
+아래 기술을 다루는 작업을 시작할 때 해당 공식 출처를 그 시점에 다시 읽고, 설치된 버전과 맞춰 본다. 문서 내용을 저장소에 복사하지 않는다.
+
+- **Supabase** (Auth, Postgres): 프로젝트 스킬 `supabase`, `supabase-postgres-best-practices`(출처 `supabase/agent-skills`)를 먼저 읽는다. 최신 문서 색인은 https://supabase.com/llms.txt, JavaScript 클라이언트는 https://supabase.com/llms/js.txt 에서 가져온다.
+- **Google Maps Platform** (Maps JavaScript API, Places): 공식 스킬 `googlemaps/agent-skills`의 `google-maps-platform`은 원본 YAML 오류로 설치되지 않았다. 설치될 때까지 https://developers.google.com/maps/documentation/javascript 와 https://developers.google.com/maps/documentation/places/web-service 를 작업 시점에 읽는다.
+
+<!-- END:stack-context -->
