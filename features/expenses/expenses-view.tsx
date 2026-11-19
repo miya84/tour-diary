@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -126,7 +125,6 @@ function TotalsLine({ totals, className }: { totals: Totals; className?: string 
 }
 
 function RateEditor({ tripId, rate }: { tripId: string; rate: number | null }) {
-  const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -139,7 +137,6 @@ function RateEditor({ tripId, rate }: { tripId: string; rate: number | null }) {
       if (res.error) return setError(res.error);
       setError(null);
       setEditing(false);
-      router.refresh();
     });
   };
 
@@ -173,7 +170,7 @@ function RateEditor({ tripId, rate }: { tripId: string; rate: number | null }) {
           취소
         </Button>
         <Button type="submit" size="sm" disabled={pending}>
-          저장
+          {pending ? "저장하는 중…" : "저장"}
         </Button>
       </div>
       {error && <p className="text-sm text-destructive">{error}</p>}

@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -15,7 +14,6 @@ import { kindLabel } from "./bookings";
 import type { Booking } from "./types";
 
 export function BookingsView({ tripId, bookings }: { tripId: string; bookings: Booking[] }) {
-  const router = useRouter();
   const [form, setForm] = useState<{ open: boolean; booking: Booking | null }>({ open: false, booking: null });
   const [detailId, setDetailId] = useState<string | null>(null);
   const [zoom, setZoom] = useState<string | null>(null);
@@ -35,7 +33,6 @@ export function BookingsView({ tripId, bookings }: { tripId: string; bookings: B
       setError(null);
       setConfirmingDelete(false);
       setDetailId(null);
-      router.refresh();
     });
 
   const openDetail = (id: string | null) => {

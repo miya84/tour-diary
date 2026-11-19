@@ -1,7 +1,6 @@
 "use client";
 
 import { APIProvider } from "@vis.gl/react-google-maps";
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -11,6 +10,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { PlaceSearch } from "@/features/itinerary/place-search";
 import type { Place } from "@/features/itinerary/types";
 import { dayLabel } from "@/features/trips/dates";
+import { useCloseWhenDone } from "@/lib/use-close-when-done";
 
 import { addOption, castVote, closePoll, createPoll, deletePoll } from "./actions";
 import { topOptionIds } from "./polls";
@@ -59,11 +59,11 @@ export function PollsView({ tripId, days, polls }: { tripId: string; days: strin
 }
 
 function CreateForm({ tripId, days, onClose }: { tripId: string; days: string[]; onClose: () => void }) {
-  const router = useRouter();
   const [question, setQuestion] = useState("");
   const [day, setDay] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const { finish, waiting } = useCloseWhenDone(pending, onClose);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,8 +72,7 @@ function CreateForm({ tripId, days, onClose }: { tripId: string; days: string[];
     startTransition(async () => {
       const res = await createPoll(tripId, { question, day });
       if (res.error) return setError(res.error);
-      router.refresh();
-      onClose();
+      finish();
     });
   };
 
@@ -101,15 +100,14 @@ function CreateForm({ tripId, days, onClose }: { tripId: string; days: string[];
         </div>
       </div>
       {error && <p className="text-sm text-destructive">{error}</p>}
-      <Button type="submit" disabled={pending}>
-        {pending ? "만드는 중…" : "만들기"}
+      <Button type="submit" disabled={waiting}>
+        {waiting ? "만드는 중…" : "만들기"}
       </Button>
     </form>
   );
 }
 
 function PollCard({ tripId, poll }: { tripId: string; poll: Poll }) {
-  const router = useRouter();
   const open = poll.status === "open";
   const [mode, setMode] = useState<"idle" | "adding" | "closing" | "deleting">("idle");
   const [title, setTitle] = useState("");
@@ -129,7 +127,6 @@ function PollCard({ tripId, poll }: { tripId: string; poll: Poll }) {
       if (res.error) return setError(res.error);
       setError(null);
       after?.();
-      router.refresh();
     });
 
   const vote = (optionId: string) => {
@@ -245,7 +242,7 @@ function PollCard({ tripId, poll }: { tripId: string; poll: Poll }) {
               취소
             </Button>
             <Button type="submit" size="sm" disabled={pending}>
-              올리기
+              {pending ? "올리는 중…" : "올리기"}
             </Button>
           </div>
         </form>

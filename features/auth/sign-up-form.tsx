@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import Link from "@/components/app-link";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -16,7 +15,6 @@ export function SignUpForm() {
   const [repeatPassword, setRepeatPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,9 +31,10 @@ export function SignUpForm() {
       return;
     }
     // 이메일 확인이 꺼져 있으면 가입 응답에 세션이 있다. 바로 로그인된 상태로 내 여행으로 간다.
+    // 페이지를 한 번만 새로 불러와 헤더까지 로그인 상태로 그린다.
     if (data.session) {
-      router.push("/");
-      router.refresh();
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- 로그인 상태가 바뀌면 레이아웃까지 새로 받는다
+      window.location.assign("/");
       return;
     }
     setError("가입했지만 바로 로그인되지 않았습니다. 로그인 화면에서 다시 시도해 주세요.");

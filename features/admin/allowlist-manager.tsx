@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -12,7 +11,6 @@ import { normalizeEmail, validateAllowlistEmail } from "./allowlist";
 import type { AllowedEmail } from "./queries";
 
 export function AllowlistManager({ emails }: { emails: AllowedEmail[] }) {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [confirming, setConfirming] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +30,6 @@ export function AllowlistManager({ emails }: { emails: AllowedEmail[] }) {
         setEmail("");
         setNotice(`${target}로 가입할 수 있습니다.`);
       }
-      router.refresh();
     });
   };
 
@@ -42,7 +39,6 @@ export function AllowlistManager({ emails }: { emails: AllowedEmail[] }) {
       setError(res.error ?? null);
       setNotice(null);
       setConfirming(null);
-      router.refresh();
     });
 
   return (
@@ -59,7 +55,7 @@ export function AllowlistManager({ emails }: { emails: AllowedEmail[] }) {
             onChange={(e) => setEmail(e.target.value)}
           />
           <Button type="submit" disabled={pending}>
-            추가
+            {pending ? "추가하는 중…" : "추가"}
           </Button>
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}

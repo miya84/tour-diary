@@ -1,10 +1,11 @@
-import Link from "next/link";
+import Link from "@/components/app-link";
 import { notFound, redirect } from "next/navigation";
 
 import { AllowlistManager } from "@/features/admin/allowlist-manager";
 import { PasswordResetForm } from "@/features/admin/password-reset-form";
 import { isAppAdmin, listAllowedEmails } from "@/features/admin/queries";
 import { getCurrentUser } from "@/lib/supabase/server";
+import { RenderStamp } from "@/lib/render-stamp";
 
 export default async function AdminPage() {
   const user = await getCurrentUser();
@@ -15,6 +16,7 @@ export default async function AdminPage() {
 
   return (
     <>
+      <RenderStamp stamp={crypto.randomUUID()} />
       <div>
         <Link href="/" className="text-sm text-muted-foreground">
           ← 내 여행

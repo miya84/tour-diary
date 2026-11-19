@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -10,7 +9,6 @@ import { acceptInvitation, declineInvitation } from "./actions";
 import type { Invitation } from "./queries";
 
 export function ReceivedInvitations({ invitations }: { invitations: Invitation[] }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -20,7 +18,6 @@ export function ReceivedInvitations({ invitations }: { invitations: Invitation[]
     startTransition(async () => {
       const { error } = await action();
       setError(error ?? null);
-      router.refresh();
     });
 
   return (

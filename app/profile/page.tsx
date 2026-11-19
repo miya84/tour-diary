@@ -1,10 +1,11 @@
-import Link from "next/link";
+import Link from "@/components/app-link";
 import { redirect } from "next/navigation";
 
 import { ChangePasswordForm } from "@/features/auth/change-password-form";
 import { getMyProfile } from "@/features/profile/queries";
 import { ProfileForm } from "@/features/profile/profile-form";
 import { getCurrentUser } from "@/lib/supabase/server";
+import { RenderStamp } from "@/lib/render-stamp";
 
 export default async function ProfilePage() {
   const user = await getCurrentUser();
@@ -13,6 +14,7 @@ export default async function ProfilePage() {
 
   return (
     <>
+      <RenderStamp stamp={crypto.randomUUID()} />
       <div>
         <Link href="/" className="text-sm text-muted-foreground">
           ← 내 여행

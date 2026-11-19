@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
+import { useCloseWhenDone } from "@/lib/use-close-when-done";
 
 import { removeAttachment, saveBooking } from "./actions";
 import { ATTACHMENT_MAX_COUNT, ATTACHMENT_TYPES, validateAttachments } from "./attachments";
@@ -39,7 +40,6 @@ export function BookingFormSheet({
 }
 
 function BookingForm({ tripId, booking, onClose }: { tripId: string; booking: Booking | null; onClose: () => void }) {
-  const router = useRouter();
   const [kind, setKind] = useState<BookingKind | "">(booking?.kind ?? "");
   const [title, setTitle] = useState(booking?.title ?? "");
   const [bookingDate, setBookingDate] = useState(booking?.bookingDate ?? "");
@@ -49,6 +49,8 @@ function BookingForm({ tripId, booking, onClose }: { tripId: string; booking: Bo
   const [attachments, setAttachments] = useState(booking?.attachments ?? []);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const { finish, waiting } = useCloseWhenDone(pending, onClose);
+  const router = useRouter();
 
   const addFiles = (picked: FileList | null) => {
     if (!picked?.length) return;
@@ -64,7 +66,6 @@ function BookingForm({ tripId, booking, onClose }: { tripId: string; booking: Bo
       const res = await removeAttachment(tripId, id);
       if (res.error) return setError(res.error);
       setAttachments((list) => list.filter((a) => a.id !== id));
-      router.refresh();
     });
 
   const submit = (e: React.FormEvent) => {
@@ -78,12 +79,12 @@ function BookingForm({ tripId, booking, onClose }: { tripId: string; booking: Bo
         const uploadError = await uploadAttachments(tripId, res.id, files);
         if (uploadError) {
           setError(uploadError);
-          router.refresh();
           return;
         }
+        // 이미지는 저장 액션이 끝난 뒤 브라우저에서 올리므로, 이 경우만 화면을 한 번 더 새로 받는다.
+        router.refresh();
       }
-      router.refresh();
-      onClose();
+      finish();
     });
   };
 
@@ -152,7 +153,7 @@ function BookingForm({ tripId, booking, onClose }: { tripId: string; booking: Bo
             {attachments.map((a, i) => (
               <li key={a.id} className="flex items-center justify-between gap-2">
                 <span>저장된 이미지 {i + 1}</span>
-                <Button type="button" size="sm" variant="ghost" disabled={pending} onClick={() => dropAttachment(a.id)}>
+                <Button type="button" size="sm" variant="ghost" disabled={waiting} onClick={() => dropAttachment(a.id)}>
                   빼기
                 </Button>
               </li>
@@ -169,8 +170,8 @@ function BookingForm({ tripId, booking, onClose }: { tripId: string; booking: Bo
         )}
       </div>
       {error && <p className="text-sm text-destructive">{error}</p>}
-      <Button type="submit" disabled={pending}>
-        {pending ? "저장하는 중…" : "저장"}
+      <Button type="submit" disabled={waiting}>
+        {waiting ? "저장하는 중…" : "저장"}
       </Button>
     </form>
   );

@@ -1,12 +1,12 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { useCloseWhenDone } from "@/lib/use-close-when-done";
 
 import { deleteTrip, updateTrip } from "./actions";
 import { tripInputError } from "./dates";
@@ -34,13 +34,13 @@ export function EditTripSheet({ tripId, trip }: { tripId: string; trip: TripFiel
 }
 
 function EditForm({ tripId, trip, onClose }: { tripId: string; trip: TripFields; onClose: () => void }) {
-  const router = useRouter();
   const [title, setTitle] = useState(trip.title);
   const [start, setStart] = useState(trip.startDate);
   const [end, setEnd] = useState(trip.endDate);
   const [error, setError] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [pending, startTransition] = useTransition();
+  const { finish, waiting } = useCloseWhenDone(pending, onClose);
 
   // 새 기간이 기존 기간의 일부를 잘라 내면 옮겨짐을 미리 알린다.
   const shrinks = !!start && !!end && (start > trip.startDate || end < trip.endDate);
@@ -52,8 +52,7 @@ function EditForm({ tripId, trip, onClose }: { tripId: string; trip: TripFields;
     startTransition(async () => {
       const res = await updateTrip(tripId, { title, start, end });
       if (res.error) return setError(res.error);
-      router.refresh();
-      onClose();
+      finish();
     });
   };
 
@@ -94,8 +93,8 @@ function EditForm({ tripId, trip, onClose }: { tripId: string; trip: TripFields;
           <Button type="button" variant="outline" onClick={onClose}>
             취소
           </Button>
-          <Button type="submit" disabled={pending}>
-            {pending && !confirmingDelete ? "저장하는 중…" : "저장"}
+          <Button type="submit" disabled={waiting}>
+            {waiting && !confirmingDelete ? "저장하는 중…" : "저장"}
           </Button>
         </div>
       </form>

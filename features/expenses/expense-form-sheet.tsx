@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -9,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { dayLabel } from "@/features/trips/dates";
+import { useCloseWhenDone } from "@/lib/use-close-when-done";
 
 import { deleteExpense, saveExpense } from "./actions";
 import { CURRENCIES, type Currency, validateExpense } from "./expenses";
@@ -48,7 +48,6 @@ function ExpenseForm({
   defaultDay,
   onClose,
 }: Omit<Props, "open" | "onOpenChange"> & { onClose: () => void }) {
-  const router = useRouter();
   const [title, setTitle] = useState(expense?.title ?? "");
   const [amount, setAmount] = useState(expense ? expense.amount.toLocaleString("en-US") : "");
   const [currency, setCurrency] = useState<Currency>(expense?.currency ?? "JPY");
@@ -61,6 +60,7 @@ function ExpenseForm({
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const { finish, waiting } = useCloseWhenDone(pending, onClose);
 
   const toggleShare = (id: string) =>
     setShareUserIds((list) => (list.includes(id) ? list.filter((x) => x !== id) : [...list, id]));
@@ -72,8 +72,7 @@ function ExpenseForm({
     startTransition(async () => {
       const res = await saveExpense(tripId, { title, amount, currency, paidBy, spentOn, note, shareUserIds }, expense?.id);
       if (res.error) return setError(res.error);
-      router.refresh();
-      onClose();
+      finish();
     });
   };
 
@@ -81,8 +80,7 @@ function ExpenseForm({
     startTransition(async () => {
       const res = await deleteExpense(tripId, expense!.id);
       if (res.error) return setError(res.error);
-      router.refresh();
-      onClose();
+      finish();
     });
 
   return (
@@ -146,10 +144,10 @@ function ExpenseForm({
         {expense &&
           (confirmingDelete ? (
             <>
-              <Button type="button" variant="outline" disabled={pending} onClick={() => setConfirmingDelete(false)}>
+              <Button type="button" variant="outline" disabled={waiting} onClick={() => setConfirmingDelete(false)}>
                 취소
               </Button>
-              <Button type="button" variant="destructive" disabled={pending} onClick={remove}>
+              <Button type="button" variant="destructive" disabled={waiting} onClick={remove}>
                 정말 삭제
               </Button>
             </>
@@ -159,8 +157,8 @@ function ExpenseForm({
             </Button>
           ))}
         <span className="flex-1" />
-        <Button type="submit" disabled={pending}>
-          {pending ? "저장하는 중…" : "저장"}
+        <Button type="submit" disabled={waiting}>
+          {waiting ? "저장하는 중…" : "저장"}
         </Button>
       </div>
     </form>

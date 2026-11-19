@@ -128,3 +128,8 @@
     @apply font-sans;
   }
 }
+/* 링크 이동 진행 막대: 빠르게 차오르다가 다음 화면이 뜰 때까지 천천히 끝으로 다가간다. */
+@keyframes link-progress {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(0.95); }
+}
