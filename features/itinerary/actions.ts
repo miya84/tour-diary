@@ -73,6 +73,30 @@ export async function deleteItem(tripId: string, id: string): Promise<Result> {
   return {};
 }
 
+const MOVE_ERRORS: Record<string, string> = {
+  day_out_of_range: "여행 기간 안의 날짜로만 옮길 수 있습니다.",
+  item_not_moved: "일정을 옮기지 못했습니다. 이미 다른 날짜로 옮겨졌을 수 있습니다.",
+  same_day: "다른 날짜를 골라 주세요.",
+};
+
+// 항목 하나를 다른 날 맨 끝으로 옮긴다.
+export async function moveItemToDay(tripId: string, itemId: string, day: string): Promise<Result> {
+  const supabase = await authed();
+  const { error } = await supabase.rpc("move_itinerary_item", { p_trip_id: tripId, p_item_id: itemId, p_day: day });
+  if (error) return { error: MOVE_ERRORS[error.message] ?? "일정을 옮기지 못했습니다." };
+  revalidatePath(`/trips/${tripId}`);
+  return {};
+}
+
+// 두 날짜의 일정을 서로 바꾼다(한쪽이 비어 있으면 그냥 옮긴다).
+export async function swapDays(tripId: string, dayA: string, dayB: string): Promise<Result> {
+  const supabase = await authed();
+  const { error } = await supabase.rpc("swap_itinerary_days", { p_trip_id: tripId, p_day_a: dayA, p_day_b: dayB });
+  if (error) return { error: MOVE_ERRORS[error.message] ?? "일정을 옮기지 못했습니다." };
+  revalidatePath(`/trips/${tripId}`);
+  return {};
+}
+
 export async function reorderItems(tripId: string, day: string, ids: string[]): Promise<Result> {
   const supabase = await authed();
   const { error } = await supabase.rpc("reorder_itinerary_items", { p_trip_id: tripId, p_day: day, p_ids: ids });
