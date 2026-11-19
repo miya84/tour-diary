@@ -5,6 +5,8 @@ import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { expenseLock } from "@/features/realtime/locks";
+import { useLock, useLockHolder } from "@/features/realtime/trip-realtime";
 import { dayLabel } from "@/features/trips/dates";
 
 import { saveExchangeRate } from "./actions";
@@ -32,6 +34,9 @@ export function ExpensesView({
   paidTransferKeys: string[];
 }) {
   const [form, setForm] = useState<{ open: boolean; expense: Expense | null; day: string }>({ open: false, expense: null, day: days[0] });
+  // 수정 화면이 열려 있는 동안 다른 멤버가 같은 경비를 못 고치게 잠근다.
+  useLock(form.expense ? expenseLock(form.expense.id) : null, form.open);
+  const holder = useLockHolder();
   const { days: groups, total, totalInKrw } = summarize(expenses, krwPer100Jpy);
   const nickname = (id: string) => people.find((p) => p.userId === id)?.nickname ?? "나간 멤버";
 
@@ -67,23 +72,27 @@ export function ExpensesView({
             <ul className="flex flex-col gap-2">
               {expenses
                 .filter((e) => e.spentOn === g.day)
-                .map((e) => (
+                .map((e) => {
+                  const editor = holder(expenseLock(e.id));
+                  return (
                   <li key={e.id}>
                     <button
                       type="button"
+                      disabled={!!editor}
                       onClick={() => setForm({ open: true, expense: e, day: e.spentOn })}
                       className="grid w-full grid-cols-[1fr_auto] items-center gap-3 rounded-2xl bg-card p-3 text-left ring-1 ring-foreground/10"
                     >
                       <span className="min-w-0">
                         <span className="block truncate text-sm font-semibold">{e.title}</span>
                         <span className="block truncate text-xs text-muted-foreground">
-                          {nickname(e.paidBy)} 냄 · {e.shareUserIds.length}명이 나눔
+                          {editor ? `${editor}님이 수정 중` : `${nickname(e.paidBy)} 냄 · ${e.shareUserIds.length}명이 나눔`}
                         </span>
                       </span>
                       <span className="text-sm font-semibold tabular-nums">{formatMoney(e.amount, e.currency)}</span>
                     </button>
                   </li>
-                ))}
+                  );
+                })}
             </ul>
           </section>
         ))

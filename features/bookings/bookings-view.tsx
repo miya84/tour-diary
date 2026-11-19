@@ -6,6 +6,9 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
+import { bookingLock } from "@/features/realtime/locks";
+import { useLock, useLockedBy } from "@/features/realtime/trip-realtime";
+
 import { deleteBooking } from "./actions";
 import { BookingFormSheet } from "./booking-form-sheet";
 import { kindLabel } from "./bookings";
@@ -21,6 +24,9 @@ export function BookingsView({ tripId, bookings }: { tripId: string; bookings: B
   const [pending, startTransition] = useTransition();
 
   const detail = bookings.find((b) => b.id === detailId) ?? null;
+  // 수정 화면이 열려 있는 동안 다른 멤버가 같은 예약을 못 고치게 잠근다.
+  useLock(form.booking ? bookingLock(form.booking.id) : null, form.open);
+  const detailEditor = useLockedBy(detail ? bookingLock(detail.id) : null);
 
   const remove = (booking: Booking) =>
     startTransition(async () => {
@@ -104,6 +110,7 @@ export function BookingsView({ tripId, bookings }: { tripId: string; bookings: B
                 )}
                 {detail.note && <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{detail.note}</p>}
                 {error && <p className="text-sm text-destructive">{error}</p>}
+                {detailEditor && <p className="text-sm text-muted-foreground">{detailEditor}님이 수정 중입니다.</p>}
                 <div className="flex justify-end gap-2">
                   {confirmingDelete ? (
                     <>
@@ -120,6 +127,7 @@ export function BookingsView({ tripId, bookings }: { tripId: string; bookings: B
                         삭제
                       </Button>
                       <Button
+                        disabled={!!detailEditor}
                         onClick={() => {
                           setForm({ open: true, booking: detail });
                           openDetail(null);
