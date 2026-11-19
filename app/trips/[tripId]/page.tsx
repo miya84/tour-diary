@@ -1,6 +1,6 @@
-import Link from "@/components/app-link";
 import { CalendarDaysIcon, TicketIcon, VoteIcon, WalletIcon } from "lucide-react";
-import Link from "next/link";
+
+import Link from "@/components/app-link";
 import { notFound } from "next/navigation";
 
 import { BookingsView } from "@/features/bookings/bookings-view";
