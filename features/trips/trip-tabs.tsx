@@ -8,7 +8,7 @@ export function TripTabs({ tabs }: { tabs: { id: string; label: string; content:
 
   return (
     <>
-      <div role="tablist" className="grid grid-cols-2 rounded-full bg-muted p-1 text-sm">
+      <div role="tablist" className="grid auto-cols-fr grid-flow-col rounded-full bg-muted p-1 text-sm">
         {tabs.map((t) => (
           <button
             key={t.id}
