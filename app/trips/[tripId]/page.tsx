@@ -5,6 +5,8 @@ import { BookingsView } from "@/features/bookings/bookings-view";
 import { listBookings } from "@/features/bookings/queries";
 import { listItems } from "@/features/itinerary/queries";
 import { TripView } from "@/features/itinerary/trip-view";
+import { listPolls } from "@/features/polls/queries";
+import { PollsView } from "@/features/polls/polls-view";
 import { MembersSheet } from "@/features/members/members-sheet";
 import { listTripMembers } from "@/features/members/queries";
 import { tripDays, tripPeriodLabel } from "@/features/trips/dates";
@@ -18,7 +20,13 @@ export default async function TripPage({ params }: PageProps<"/trips/[tripId]">)
   // 멤버가 아니면 RLS 때문에 여행이 보이지 않는다.
   if (!trip || !user) notFound();
 
-  const [items, members, bookings] = await Promise.all([listItems(tripId), listTripMembers(tripId), listBookings(tripId)]);
+  const [items, members, bookings, polls] = await Promise.all([
+    listItems(tripId),
+    listTripMembers(tripId),
+    listBookings(tripId),
+    listPolls(tripId),
+  ]);
+  const days = tripDays(trip.startDate, trip.endDate);
 
   return (
     <>
@@ -34,8 +42,9 @@ export default async function TripPage({ params }: PageProps<"/trips/[tripId]">)
       </div>
       <TripTabs
         tabs={[
-          { id: "itinerary", label: "일정", content: <TripView tripId={tripId} days={tripDays(trip.startDate, trip.endDate)} items={items} /> },
+          { id: "itinerary", label: "일정", content: <TripView tripId={tripId} days={days} items={items} /> },
           { id: "bookings", label: "예약함", content: <BookingsView tripId={tripId} bookings={bookings} /> },
+          { id: "polls", label: "투표", content: <PollsView tripId={tripId} days={days} polls={polls} /> },
         ]}
       />
     </>
