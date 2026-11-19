@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -16,7 +15,6 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,9 +26,10 @@ export function LoginForm() {
       setIsLoading(false);
       return;
     }
+    // 페이지를 한 번만 새로 불러온다. 헤더(루트 레이아웃)까지 로그인 상태로 다시 그려지고,
+    // push + refresh처럼 서버가 화면을 두 번 그리지 않는다. 이동이 끝날 때까지 버튼은 "로그인하는 중…"으로 둔다.
     const next = new URLSearchParams(window.location.search).get("next");
-    router.push(safeNextPath(next, "/"));
-    router.refresh();
+    window.location.assign(safeNextPath(next, "/"));
   };
 
   return (
