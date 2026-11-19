@@ -5,6 +5,7 @@ import Link from "next/link";
 import "./globals.css";
 import { LogoutButton } from "@/features/auth/logout-button";
 import { cn } from "@/lib/utils";
+import { isAppAdmin } from "@/features/admin/queries";
 import { getMyProfile } from "@/features/profile/queries";
 import { getCurrentUser } from "@/lib/supabase/server";
 
@@ -29,7 +30,7 @@ export const viewport: Viewport = { width: "device-width", initialScale: 1 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const user = await getCurrentUser();
-  const profile = user ? await getMyProfile(user.id) : null;
+  const [profile, admin] = user ? await Promise.all([getMyProfile(user.id), isAppAdmin(user.id)]) : [null, false];
 
   return (
     <html
@@ -45,6 +46,11 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             <nav className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
               {user ? (
                 <>
+                  {admin && (
+                    <Link href="/admin" className="shrink-0 rounded-full px-3 py-1 text-foreground hover:bg-muted">
+                      어드민
+                    </Link>
+                  )}
                   <Link href="/profile" className="max-w-40 truncate rounded-full px-3 py-1 text-foreground hover:bg-muted">
                     {profile?.nickname ?? user.email}
                   </Link>
