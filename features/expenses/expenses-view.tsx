@@ -10,7 +10,17 @@ import { dayLabel } from "@/features/trips/dates";
 
 import { saveExchangeRate } from "./actions";
 import { ExpenseFormSheet } from "./expense-form-sheet";
-import { defaultExpenseDay, formatMoney, summarize, type Totals } from "./expenses";
+import {
+  defaultExpenseDay,
+  FOREIGN_CURRENCIES,
+  type ForeignCurrency,
+  formatMoney,
+  rateUnitLabel,
+  type Rates,
+  summarize,
+  type Totals,
+  usedCurrencies,
+} from "./expenses";
 import { settle } from "./settlement";
 import { SettlementSheet } from "./settlement-sheet";
 import type { Expense, ExpensePerson } from "./types";
@@ -21,7 +31,7 @@ export function ExpensesView({
   people,
   currentUserId,
   expenses,
-  krwPer100Jpy,
+  rates,
   paidTransferKeys,
 }: {
   tripId: string;
@@ -29,14 +39,14 @@ export function ExpensesView({
   people: ExpensePerson[];
   currentUserId: string;
   expenses: Expense[];
-  krwPer100Jpy: number | null;
+  rates: Rates;
   paidTransferKeys: string[];
 }) {
   const [form, setForm] = useState<{ open: boolean; expense: Expense | null; day: string }>({ open: false, expense: null, day: days[0] });
   // 수정 화면이 열려 있는 동안 다른 멤버가 같은 경비를 못 고치게 잠근다.
   useLock(form.expense ? expenseLock(form.expense.id) : null, form.open);
   const holder = useLockHolder();
-  const { days: groups, total, totalInKrw } = summarize(expenses, krwPer100Jpy);
+  const { days: groups, total, totalInKrw } = summarize(expenses, rates);
   const nickname = (id: string) => people.find((p) => p.userId === id)?.nickname ?? "나간 멤버";
 
   // 오늘 날짜는 여는 순간 기기 시간대로 정한다.
@@ -54,10 +64,12 @@ export function ExpensesView({
       <section className="flex flex-col gap-2 rounded-2xl bg-card p-4 shadow-soft ring-1 ring-foreground/5">
         <div className="text-xs text-muted-foreground">전체 합계</div>
         <TotalsLine totals={total} className="text-2xl font-bold text-primary" />
-        {totalInKrw !== null && <div className="text-sm">원으로 합치면 약 {formatMoney(totalInKrw, "KRW")}</div>}
-        <RateEditor tripId={tripId} rate={krwPer100Jpy} />
+        {totalInKrw !== null && usedCurrencies(total).some((c) => c !== "KRW") && (
+          <div className="text-sm">원으로 합치면 약 {formatMoney(totalInKrw, "KRW")}</div>
+        )}
+        <RatesPanel tripId={tripId} rates={rates} used={usedCurrencies(total)} />
         <div className="flex justify-end border-t pt-2">
-          <SettlementSheet tripId={tripId} settlement={settle(expenses, krwPer100Jpy)} paidKeys={paidTransferKeys} nickname={nickname} />
+          <SettlementSheet tripId={tripId} settlement={settle(expenses, rates)} paidKeys={paidTransferKeys} nickname={nickname} />
         </div>
       </section>
 
@@ -112,6 +124,7 @@ export function ExpensesView({
         currentUserId={currentUserId}
         expense={form.expense}
         defaultDay={form.day}
+        defaultCurrency={expenses.at(-1)?.currency ?? "JPY"}
         open={form.open}
         onOpenChange={(open) => setForm((f) => ({ ...f, open }))}
       />
@@ -120,20 +133,37 @@ export function ExpensesView({
 }
 
 function TotalsLine({ totals, className }: { totals: Totals; className?: string }) {
-  const parts = [totals.JPY ? formatMoney(totals.JPY, "JPY") : null, totals.KRW ? formatMoney(totals.KRW, "KRW") : null].filter(Boolean);
+  const parts = usedCurrencies(totals).map((c) => formatMoney(totals[c], c));
   return <div className={"tabular-nums " + (className ?? "")}>{parts.length ? parts.join(" + ") : "0"}</div>;
 }
 
-function RateEditor({ tripId, rate }: { tripId: string; rate: number | null }) {
+// 쓴 외화와 이미 넣은 환율만 보여 준다. 아직 아무것도 없으면 미리 넣을 수 있게 모두 보여 준다.
+function RatesPanel({ tripId, rates, used }: { tripId: string; rates: Rates; used: string[] }) {
+  const shown = FOREIGN_CURRENCIES.filter((c) => used.includes(c) || rates[c] !== null);
+  const list = shown.length ? shown : FOREIGN_CURRENCIES;
+  return (
+    <div className="flex flex-col gap-1.5 border-t pt-2">
+      {list.every((c) => rates[c] === null) && (
+        <p className="text-xs text-muted-foreground">환율을 넣으면 원으로 합쳐 보여 줍니다.</p>
+      )}
+      {list.map((c) => (
+        <RateEditor key={c} tripId={tripId} currency={c} rate={rates[c]} />
+      ))}
+    </div>
+  );
+}
+
+function RateEditor({ tripId, currency, rate }: { tripId: string; currency: ForeignCurrency; rate: number | null }) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const unit = rateUnitLabel(currency);
 
   const save = (e: React.FormEvent) => {
     e.preventDefault();
     startTransition(async () => {
-      const res = await saveExchangeRate(tripId, value);
+      const res = await saveExchangeRate(tripId, currency, value);
       if (res.error) return setError(res.error);
       setError(null);
       setEditing(false);
@@ -142,8 +172,10 @@ function RateEditor({ tripId, rate }: { tripId: string; rate: number | null }) {
 
   if (!editing) {
     return (
-      <div className="flex items-center justify-between gap-2 border-t pt-2 text-sm text-muted-foreground">
-        <span>{rate === null ? "환율을 넣으면 원으로 합쳐 보여 줍니다." : `환율 100엔 = ${rate.toLocaleString("en-US")}원`}</span>
+      <div className="flex items-center justify-between gap-2 text-sm text-muted-foreground">
+        <span className="tabular-nums">
+          {unit} = {rate === null ? "환율 없음" : `${rate.toLocaleString("en-US")}원`}
+        </span>
         <Button
           size="sm"
           variant="outline"
@@ -159,12 +191,19 @@ function RateEditor({ tripId, rate }: { tripId: string; rate: number | null }) {
   }
 
   return (
-    <form onSubmit={save} noValidate className="flex flex-col gap-2 border-t pt-2">
-      <label htmlFor="exchange-rate" className="text-sm">
-        100엔은 몇 원인가요?
+    <form onSubmit={save} noValidate className="flex flex-col gap-2">
+      <label htmlFor={`exchange-rate-${currency}`} className="text-sm">
+        {unit}
+        {hasFinalConsonant(unit) ? "은" : "는"} 몇 원인가요?
       </label>
       <div className="flex items-center gap-2">
-        <Input id="exchange-rate" inputMode="decimal" placeholder="예: 920" value={value} onChange={(e) => setValue(e.target.value)} />
+        <Input
+          id={`exchange-rate-${currency}`}
+          inputMode="decimal"
+          placeholder={RATE_EXAMPLES[currency]}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+        />
         <span className="text-sm">원</span>
         <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(false)}>
           취소
@@ -177,3 +216,8 @@ function RateEditor({ tripId, rate }: { tripId: string; rate: number | null }) {
     </form>
   );
 }
+
+// "100엔은", "1달러는"처럼 조사를 고르려고 마지막 글자의 받침을 본다.
+const hasFinalConsonant = (word: string) => (word.charCodeAt(word.length - 1) - 0xac00) % 28 !== 0;
+
+const RATE_EXAMPLES: Record<ForeignCurrency, string> = { JPY: "예: 920", USD: "예: 1,380", VND: "예: 5.4" };

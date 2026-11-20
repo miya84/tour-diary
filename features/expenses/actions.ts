@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 
-import { CURRENCIES, parseAmount, parseRate, validateExpense } from "./expenses";
+import { CURRENCIES, FOREIGN_CURRENCIES, type ForeignCurrency, parseAmount, parseRate, validateExpense } from "./expenses";
+import { RATE_COLUMNS } from "./queries";
 import type { Transfer } from "./settlement";
 import type { ExpenseInput } from "./types";
 
@@ -17,9 +18,9 @@ async function authed() {
 }
 
 export async function saveExpense(tripId: string, input: ExpenseInput, expenseId?: string): Promise<Result> {
+  if (!CURRENCIES.some((c) => c.value === input.currency)) return { error: "통화를 골라 주세요." };
   const message = validateExpense(input);
   if (message) return { error: message };
-  if (!CURRENCIES.some((c) => c.value === input.currency)) return { error: "통화를 골라 주세요." };
   if (input.note.length > 1000) return { error: "메모는 1,000자까지 쓸 수 있습니다." };
 
   const supabase = await authed();
@@ -27,7 +28,7 @@ export async function saveExpense(tripId: string, input: ExpenseInput, expenseId
     p_trip_id: tripId,
     p_expense_id: expenseId ?? null,
     p_title: input.title,
-    p_amount: parseAmount(input.amount),
+    p_amount: parseAmount(input.amount, input.currency),
     p_currency: input.currency,
     p_paid_by: input.paidBy,
     p_spent_on: input.spentOn,
@@ -60,13 +61,15 @@ export async function setTransferPaid(tripId: string, transfer: Transfer, paid: 
   return {};
 }
 
-export async function saveExchangeRate(tripId: string, input: string): Promise<Result> {
+// 한 통화의 환율만 넣거나 고친다. 다른 통화의 환율은 그대로 둔다.
+export async function saveExchangeRate(tripId: string, currency: ForeignCurrency, input: string): Promise<Result> {
+  if (!FOREIGN_CURRENCIES.includes(currency)) return { error: "통화가 올바르지 않습니다." };
   const rate = parseRate(input);
   if (rate === null) return { error: "환율은 0보다 큰 숫자로 입력해 주세요(소수 둘째 자리까지)." };
   const supabase = await authed();
   const { error } = await supabase
     .from("trip_exchange_rates")
-    .upsert({ trip_id: tripId, krw_per_100_jpy: rate, updated_at: new Date().toISOString() });
+    .upsert({ trip_id: tripId, [RATE_COLUMNS[currency]]: rate, updated_at: new Date().toISOString() });
   if (error) return { error: "환율을 저장하지 못했습니다." };
   revalidatePath(`/trips/${tripId}`);
   return {};

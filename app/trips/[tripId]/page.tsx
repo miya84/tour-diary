@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { BookingsView } from "@/features/bookings/bookings-view";
 import { listBookings } from "@/features/bookings/queries";
 import { ExpensesView } from "@/features/expenses/expenses-view";
-import { getExchangeRate, listExpenses, listPaidTransferKeys } from "@/features/expenses/queries";
+import { getExchangeRates, listExpenses, listPaidTransferKeys } from "@/features/expenses/queries";
 import { listItems } from "@/features/itinerary/queries";
 import { TripView } from "@/features/itinerary/trip-view";
 import { listPolls } from "@/features/polls/queries";
@@ -51,12 +51,12 @@ export default async function TripPage({ params }: PageProps<"/trips/[tripId]">)
     );
   }
 
-  const [items, members, bookings, expenses, rate, polls, paidTransferKeys] = await Promise.all([
+  const [items, members, bookings, expenses, rates, polls, paidTransferKeys] = await Promise.all([
     listItems(tripId),
     listTripMembers(tripId),
     listBookings(tripId),
     listExpenses(tripId),
-    getExchangeRate(tripId),
+    getExchangeRates(tripId),
     listPolls(tripId),
     listPaidTransferKeys(tripId),
   ]);
@@ -90,7 +90,7 @@ export default async function TripPage({ params }: PageProps<"/trips/[tripId]">)
             icon: <WalletIcon />,
             content: (
               <ExpensesView tripId={tripId} days={days} people={people} currentUserId={user.id} expenses={expenses}
-                krwPer100Jpy={rate}
+                rates={rates}
                 paidTransferKeys={paidTransferKeys}
               />
             ),

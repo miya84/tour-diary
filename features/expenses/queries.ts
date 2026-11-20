@@ -2,7 +2,7 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 
-import type { Currency } from "./expenses";
+import { type Currency, type ForeignCurrency, NO_RATES, type Rates } from "./expenses";
 import { transferKey } from "./settlement";
 import type { Expense } from "./types";
 
@@ -36,10 +36,19 @@ export async function listPaidTransferKeys(tripId: string): Promise<string[]> {
   return data.map((p) => transferKey({ from: p.from_user, to: p.to_user, amount: Number(p.amount) }));
 }
 
-// 100엔당 원. 아직 안 넣었으면 null.
-export async function getExchangeRate(tripId: string): Promise<number | null> {
+// 외화별 환율 컬럼. "100엔 = krw_per_100_jpy원", "1달러 = krw_per_1_usd원", "100동 = krw_per_100_vnd원".
+export const RATE_COLUMNS = { JPY: "krw_per_100_jpy", USD: "krw_per_1_usd", VND: "krw_per_100_vnd" } as const satisfies Record<ForeignCurrency, string>;
+
+// 외화별 원 환율. 아직 안 넣은 통화는 null.
+export async function getExchangeRates(tripId: string): Promise<Rates> {
   const supabase = await createClient();
-  const { data, error } = await supabase.from("trip_exchange_rates").select("krw_per_100_jpy").eq("trip_id", tripId).maybeSingle();
+  const { data, error } = await supabase
+    .from("trip_exchange_rates")
+    .select("krw_per_100_jpy, krw_per_1_usd, krw_per_100_vnd")
+    .eq("trip_id", tripId)
+    .maybeSingle();
   if (error) throw error;
-  return data ? Number(data.krw_per_100_jpy) : null;
+  if (!data) return NO_RATES;
+  const num = (v: unknown) => (v === null || v === undefined ? null : Number(v));
+  return { JPY: num(data.krw_per_100_jpy), USD: num(data.krw_per_1_usd), VND: num(data.krw_per_100_vnd) };
 }

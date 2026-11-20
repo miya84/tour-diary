@@ -1,4 +1,4 @@
-import type { Currency } from "./expenses";
+import { convertToKrw, FOREIGN_CURRENCIES, type Currency, type ForeignCurrency, type Rates } from "./expenses";
 
 export type Transfer = { from: string; to: string; amount: number };
 export type PersonBalance = { userId: string; paid: number; owed: number; net: number };
@@ -7,23 +7,24 @@ type SettleExpense = { amount: number; currency: Currency; paidBy: string; share
 
 export type Settlement =
   | { status: "empty" }
-  | { status: "needs_rate" }
+  | { status: "needs_rate"; missing: ForeignCurrency[] }
   | { status: "ok"; total: number; people: PersonBalance[]; transfers: Transfer[] };
 
-// 경비 한 건의 원 금액. 엔은 금액 × (100엔당 원) ÷ 100을 원 단위 반올림.
-export function toKrw(amount: number, currency: Currency, krwPer100Jpy: number | null): number {
-  if (currency === "KRW") return amount;
-  if (krwPer100Jpy === null) throw new Error("환율이 필요합니다.");
-  return Math.round((amount * krwPer100Jpy) / 100);
+// 경비 한 건의 원 금액. 외화는 금액 × 환율 ÷ 기준 단위를 원 단위 반올림(예: 엔은 ÷ 100).
+export function toKrw(amount: number, currency: Currency, rates: Rates): number {
+  const krw = convertToKrw(amount, currency, rates);
+  if (krw === null) throw new Error("환율이 필요합니다.");
+  return krw;
 }
 
 const byId = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 
 // 모두 원으로 정산한다. 경비 한 건씩 원으로 바꿔 나눌 사람에게 똑같이 나누고,
 // 남는 1원은 사용자 ID 순서로 한 사람씩 더 부담한다.
-export function settle(expenses: SettleExpense[], krwPer100Jpy: number | null): Settlement {
+export function settle(expenses: SettleExpense[], rates: Rates): Settlement {
   if (!expenses.length) return { status: "empty" };
-  if (krwPer100Jpy === null && expenses.some((e) => e.currency === "JPY")) return { status: "needs_rate" };
+  const missing = FOREIGN_CURRENCIES.filter((c) => rates[c] === null && expenses.some((e) => e.currency === c));
+  if (missing.length) return { status: "needs_rate", missing };
 
   const balances = new Map<string, PersonBalance>();
   const person = (userId: string) => {
@@ -34,7 +35,7 @@ export function settle(expenses: SettleExpense[], krwPer100Jpy: number | null): 
 
   let total = 0;
   for (const e of expenses) {
-    const krw = toKrw(e.amount, e.currency, krwPer100Jpy);
+    const krw = toKrw(e.amount, e.currency, rates);
     total += krw;
     person(e.paidBy).paid += krw;
     const sharers = [...new Set(e.shareUserIds)].sort(byId);

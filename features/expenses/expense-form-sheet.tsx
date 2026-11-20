@@ -11,7 +11,7 @@ import { dayLabel } from "@/features/trips/dates";
 import { useCloseWhenDone } from "@/lib/use-close-when-done";
 
 import { deleteExpense, saveExpense } from "./actions";
-import { CURRENCIES, type Currency, validateExpense } from "./expenses";
+import { CURRENCIES, type Currency, formatAmount, validateExpense } from "./expenses";
 import type { Expense, ExpensePerson } from "./types";
 
 type Props = {
@@ -21,6 +21,7 @@ type Props = {
   currentUserId: string;
   expense: Expense | null;
   defaultDay: string;
+  defaultCurrency: Currency;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
@@ -46,11 +47,12 @@ function ExpenseForm({
   currentUserId,
   expense,
   defaultDay,
+  defaultCurrency,
   onClose,
 }: Omit<Props, "open" | "onOpenChange"> & { onClose: () => void }) {
   const [title, setTitle] = useState(expense?.title ?? "");
-  const [amount, setAmount] = useState(expense ? expense.amount.toLocaleString("en-US") : "");
-  const [currency, setCurrency] = useState<Currency>(expense?.currency ?? "JPY");
+  const [amount, setAmount] = useState(expense ? formatAmount(expense.amount, expense.currency) : "");
+  const [currency, setCurrency] = useState<Currency>(expense?.currency ?? defaultCurrency);
   const [paidBy, setPaidBy] = useState(expense?.paidBy ?? currentUserId);
   const [shareUserIds, setShareUserIds] = useState<string[]>(
     expense ? expense.shareUserIds.filter((id) => people.some((p) => p.userId === id)) : people.map((p) => p.userId),
@@ -67,7 +69,7 @@ function ExpenseForm({
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    const message = validateExpense({ title, amount, shareUserIds });
+    const message = validateExpense({ title, amount, currency, shareUserIds });
     if (message) return setError(message);
     startTransition(async () => {
       const res = await saveExpense(tripId, { title, amount, currency, paidBy, spentOn, note, shareUserIds }, expense?.id);
@@ -89,18 +91,17 @@ function ExpenseForm({
         <Label htmlFor="expense-title">내용</Label>
         <Input id="expense-title" placeholder="예: 이치란 라멘" maxLength={100} value={title} onChange={(e) => setTitle(e.target.value)} />
       </div>
-      <div className="grid grid-cols-[1fr_auto] items-end gap-3">
-        <div className="grid gap-2">
-          <Label htmlFor="expense-amount">금액</Label>
-          <Input
-            id="expense-amount"
-            inputMode="numeric"
-            placeholder="예: 2,980"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-          />
-        </div>
+      <div className="grid gap-2">
+        <Label htmlFor="expense-amount">금액</Label>
+        {/* 통화가 넷이라 금액 칸 옆에 두면 폰에서 칸이 너무 좁아진다 */}
         <Chips label="통화" options={CURRENCIES.map((c) => ({ id: c.value, label: c.label }))} selected={[currency]} onToggle={(id) => setCurrency(id as Currency)} />
+        <Input
+          id="expense-amount"
+          inputMode={currency === "USD" ? "decimal" : "numeric"}
+          placeholder={AMOUNT_EXAMPLES[currency]}
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+        />
       </div>
       <div className="grid gap-2">
         <Label>낸 사람</Label>
@@ -164,6 +165,8 @@ function ExpenseForm({
     </form>
   );
 }
+
+const AMOUNT_EXAMPLES: Record<Currency, string> = { JPY: "예: 2,980", USD: "예: 12.50", VND: "예: 150,000", KRW: "예: 15,000" };
 
 function Chips({
   label,

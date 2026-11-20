@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 import { setTransferPaid } from "./actions";
-import { formatMoney } from "./expenses";
+import { CURRENCIES, formatMoney } from "./expenses";
 import { type Settlement, type Transfer, transferKey } from "./settlement";
 
 export function SettlementSheet({
@@ -42,7 +42,12 @@ export function SettlementSheet({
         </SheetHeader>
         <div className="flex flex-col gap-5 px-4 pb-6">
           {settlement.status === "empty" && <Notice>정산할 경비가 없습니다.</Notice>}
-          {settlement.status === "needs_rate" && <Notice>엔 경비가 있어요. 경비 탭에서 여행 환율을 넣으면 원으로 정산합니다.</Notice>}
+          {settlement.status === "needs_rate" && (
+            <Notice>
+              {settlement.missing.map((c) => CURRENCIES.find((x) => x.value === c)!.label).join("·")} 환율이 없어요. 경비 탭에서 여행 환율을 넣으면 원으로
+              정산합니다.
+            </Notice>
+          )}
           {settlement.status === "ok" && (
             <>
               <section className="flex flex-col gap-2">
@@ -98,7 +103,7 @@ export function SettlementSheet({
                 )}
                 {error && <p className="text-sm text-destructive">{error}</p>}
                 <p className="text-xs text-muted-foreground">
-                  모두 원으로 계산합니다. 엔 경비는 한 건씩 여행 환율로 바꿔 나눕니다. 경비가 바뀌어 금액이 달라지면 보냄 표시가 풀립니다.
+                  모두 원으로 계산합니다. 외화 경비는 한 건씩 여행 환율로 바꿔 나눕니다. 경비가 바뀌어 금액이 달라지면 보냄 표시가 풀립니다.
                 </p>
               </section>
             </>
