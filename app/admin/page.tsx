@@ -1,4 +1,3 @@
-import Link from "@/components/app-link";
 import { notFound, redirect } from "next/navigation";
 
 import { AllowlistManager } from "@/features/admin/allowlist-manager";
@@ -6,6 +5,7 @@ import { PasswordResetForm } from "@/features/admin/password-reset-form";
 import { isAppAdmin, listAllowedEmails } from "@/features/admin/queries";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { RenderStamp } from "@/lib/render-stamp";
+import { BackLink } from "@/components/back-link";
 
 export default async function AdminPage() {
   const user = await getCurrentUser();
@@ -18,10 +18,8 @@ export default async function AdminPage() {
     <>
       <RenderStamp stamp={crypto.randomUUID()} />
       <div>
-        <Link href="/" className="text-sm text-muted-foreground">
-          ← 내 여행
-        </Link>
-        <h1 className="mt-0.5 text-2xl font-semibold tracking-tight">어드민</h1>
+        <BackLink href="/">내 여행</BackLink>
+        <h1 className="text-[22px] font-bold leading-tight tracking-tight">어드민</h1>
       </div>
       <AllowlistManager emails={emails} />
       <PasswordResetForm />

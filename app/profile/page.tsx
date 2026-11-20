@@ -1,4 +1,3 @@
-import Link from "@/components/app-link";
 import { redirect } from "next/navigation";
 
 import { ChangePasswordForm } from "@/features/auth/change-password-form";
@@ -6,6 +5,7 @@ import { getMyProfile } from "@/features/profile/queries";
 import { ProfileForm } from "@/features/profile/profile-form";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { RenderStamp } from "@/lib/render-stamp";
+import { BackLink } from "@/components/back-link";
 
 export default async function ProfilePage() {
   const user = await getCurrentUser();
@@ -16,10 +16,8 @@ export default async function ProfilePage() {
     <>
       <RenderStamp stamp={crypto.randomUUID()} />
       <div>
-        <Link href="/" className="text-sm text-muted-foreground">
-          ← 내 여행
-        </Link>
-        <h1 className="mt-0.5 text-2xl font-semibold tracking-tight">프로필</h1>
+        <BackLink href="/">내 여행</BackLink>
+        <h1 className="text-[22px] font-bold leading-tight tracking-tight">프로필</h1>
       </div>
       <ProfileForm email={user.email} nickname={profile?.nickname ?? ""} />
       <ChangePasswordForm />

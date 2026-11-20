@@ -1,6 +1,5 @@
 import { CalendarDaysIcon, TicketIcon, VoteIcon, WalletIcon } from "lucide-react";
 
-import Link from "@/components/app-link";
 import { notFound } from "next/navigation";
 
 import { BookingsView } from "@/features/bookings/bookings-view";
@@ -22,6 +21,7 @@ import { getTrip } from "@/features/trips/queries";
 import { TripTabs } from "@/features/trips/trip-tabs";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { RenderStamp } from "@/lib/render-stamp";
+import { BackLink } from "@/components/back-link";
 
 export default async function TripPage({ params }: PageProps<"/trips/[tripId]">) {
   const { tripId } = await params;
@@ -38,10 +38,8 @@ export default async function TripPage({ params }: PageProps<"/trips/[tripId]">)
       <TripRealtime tripId={tripId} userName="" presence={false}>
         <RenderStamp stamp={crypto.randomUUID()} />
         <div>
-          <Link href="/" className="text-sm text-muted-foreground">
-            ← 내 여행
-          </Link>
-          <h1 className="mt-0.5 text-[22px] font-bold leading-tight tracking-tight">{trip.title}</h1>
+          <BackLink href="/">내 여행</BackLink>
+          <h1 className="text-[22px] font-bold leading-tight tracking-tight">{trip.title}</h1>
           <div className="mt-1 flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
             <p className="whitespace-nowrap text-sm text-muted-foreground">{tripPeriodLabel(trip.startDate, trip.endDate)}</p>
             <CopyTripSheet trip={{ id: trip.id, title: trip.title, startDate: trip.startDate, endDate: trip.endDate }} />
@@ -71,10 +69,8 @@ export default async function TripPage({ params }: PageProps<"/trips/[tripId]">)
     <TripRealtime tripId={tripId} userName={myName}>
       <RenderStamp stamp={crypto.randomUUID()} />
       <div>
-        <Link href="/" className="text-sm text-muted-foreground">
-          ← 내 여행
-        </Link>
-        <h1 className="mt-0.5 text-[22px] font-bold leading-tight tracking-tight">{trip.title}</h1>
+        <BackLink href="/">내 여행</BackLink>
+        <h1 className="text-[22px] font-bold leading-tight tracking-tight">{trip.title}</h1>
         <div className="mt-1 flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
           <p className="whitespace-nowrap text-sm text-muted-foreground">{tripPeriodLabel(trip.startDate, trip.endDate)}</p>
           <div className="flex items-center gap-2">

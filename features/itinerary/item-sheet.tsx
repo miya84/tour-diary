@@ -93,24 +93,28 @@ function ItemForm({
   return (
     <form onSubmit={submit} noValidate className="flex flex-col gap-4 px-4 pb-6">
       <div className="grid gap-2">
-        <Label htmlFor="item-title">제목</Label>
+        <Label htmlFor="item-title">
+          제목 <span aria-hidden className="text-destructive">*</span>
+        </Label>
         <Input id="item-title" placeholder="예: 기린코 호수 산책" value={title} aria-invalid={error && !title.trim() ? true : undefined} onChange={(e) => setTitle(e.target.value)} />
       </div>
       <div className="grid gap-2">
         <Label htmlFor="item-place">
-          장소 <span className="font-normal text-muted-foreground">선택</span>
+          장소
         </Label>
         <PlaceSearch value={place} onChange={setPlace} />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="grid gap-2">
           <Label htmlFor="item-time">
-            시작 시간 <span className="font-normal text-muted-foreground">선택</span>
+            시작 시간
           </Label>
           <Input id="item-time" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="item-day">날짜</Label>
+          <Label htmlFor="item-day">
+            날짜 <span aria-hidden className="text-destructive">*</span>
+          </Label>
           <select
             id="item-day"
             value={day}
@@ -127,7 +131,7 @@ function ItemForm({
       </div>
       <div className="grid gap-2">
         <Label htmlFor="item-note">
-          메모 <span className="font-normal text-muted-foreground">선택</span>
+          메모
         </Label>
         <Textarea id="item-note" placeholder="예약 번호, 먹을 것, 주의할 점" value={note} onChange={(e) => setNote(e.target.value)} />
       </div>
